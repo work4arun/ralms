@@ -1,0 +1,83 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template theme_classic_modern/header
+
+    Modern header/navbar using Tailwind CSS.
+
+    Context variables required:
+    * sitename - Site short name
+    * output - Core renderer
+    * usermenu - User menu export
+    * langmenu - Language menu export
+}}
+<header class="sticky top-0 z-40 w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+
+            {{! ── Logo / Brand ── }}
+            <div class="flex items-center gap-3">
+                <a href="{{{ config.wwwroot }}}" class="flex items-center gap-2 group">
+                    {{#output.get_compact_logo_url}}
+                        <img src="{{{ output.get_compact_logo_url }}}"
+                             alt="{{{ sitename }}}"
+                             class="h-8 w-auto">
+                    {{/output.get_compact_logo_url}}
+                    {{^output.get_compact_logo_url}}
+                        <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                            {{sitename}}
+                        </span>
+                    {{/output.get_compact_logo_url}}
+                </a>
+            </div>
+
+            {{! ── Primary Nav + Search ── }}
+            <div class="hidden md:flex items-center gap-6">
+                <nav class="flex gap-1">
+                    {{{ output.navbar }}}
+                </nav>
+            </div>
+
+            {{! ── Right side: Dark toggle + User menu ── }}
+            <div class="flex items-center gap-4">
+                {{! Dark mode toggle }}
+                <button id="cm-darkmode-toggle"
+                        class="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                        aria-label="Toggle dark mode">
+                    <svg class="w-5 h-5 text-gray-600 dark:hidden" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                    </svg>
+                    <svg class="w-5 h-5 text-yellow-500 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.536l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.121-10.071l.707-.707a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 103.636 5.05l-.707.707a1 1 0 001.414 1.414l.707-.707zm5.414 5.414a1 1 0 01-1.414 0L7.05 10.364a1 1 0 011.414-1.414l2.121 2.121zM5 8a1 1 0 100-2H4a1 1 0 100 2h1z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+
+                {{! User menu }}
+                {{#usermenu}}
+                    <div class="flex items-center gap-2">
+                        {{{ usermenu }}}
+                    </div>
+                {{/usermenu}}
+
+                {{! Language menu }}
+                {{#langmenu}}
+                    <div>{{> core/action_menu}}</div>
+                {{/langmenu}}
+            </div>
+        </div>
+    </div>
+</header>

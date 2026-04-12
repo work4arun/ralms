@@ -125,14 +125,3 @@ function theme_rak_pluginfile($course, $cm, $context, $filearea, $args, $forcedo
     send_file_not_found();
 }
 
-/**
- * Add additional HTML to the <head> section.
- * Used here to import the Inter Google Font.
- *
- * @return string HTML fragment.
- */
-function theme_rak_before_standard_html_head() {
-    return '<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">';
-}

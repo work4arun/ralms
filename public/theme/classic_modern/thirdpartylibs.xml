@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<libraries>
+    <!-- Tailwind CSS is loaded via CDN from cdn.tailwindcss.com, not bundled -->
+    <!-- Google Fonts are loaded via <link> tags in templates -->
+</libraries>

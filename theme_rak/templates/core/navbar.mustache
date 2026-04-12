@@ -1,0 +1,103 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    @template core/navbar
+    @copyright 2024 RAK Theme
+    @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+
+    RAK Theme — Custom Navbar
+    ─────────────────────────
+    • Glassmorphism panel (via .glass-panel CSS class)
+    • Logo / site name on the left
+    • Primary nav links center (icons only at collapsed state)
+    • User avatar floating bubble on the right
+    • Home link shows icon only (text hidden via CSS)
+
+    Context variables required for this template:
+    * sitename        : string - Site name
+    * output          : object - Renderer output
+    * primarynavigation : object - Primary nav items
+    * usermenu        : object - User menu
+    * langmenu        : object - Language selector
+    * courseindexopen : bool   - Is course index open
+    * hasblocks       : bool   - Blocks present
+    * mobileprimarynav: array  - Mobile nav
+}}
+<header id="page-header" class="header-maxwidth d-print-none">
+    <nav class="navbar fixed-top glass-panel px-3 px-md-4" aria-label="{{#str}} navigation {{/str}}">
+
+        {{! ── Left: Hamburger + Logo ── }}
+        <div class="d-flex align-items-center gap-2">
+            {{#courseindexopen}}
+            <button class="btn btn-icon nav-btn me-1 p-1"
+                    data-action="toggle-drawer"
+                    data-target="theme_boost/drawers-courseindex"
+                    data-toggle="drawer"
+                    aria-controls="theme_boost-drawers-courseindex"
+                    aria-expanded="true"
+                    type="button">
+                <span class="visually-hidden">{{#str}} togglecourseindexdrawer, core {{/str}}</span>
+                <i class="fa fa-bars fa-fw" aria-hidden="true"></i>
+            </button>
+            {{/courseindexopen}}
+
+            <a href="{{{config.wwwroot}}}" class="navbar-brand rak-brand d-flex align-items-center gap-2" aria-label="{{sitename}}">
+                {{#output.get_logo_url}}
+                    <img src="{{{.}}}" alt="{{sitename}}" class="rak-logo" height="34">
+                {{/output.get_logo_url}}
+                {{^output.get_logo_url}}
+                    <span class="rak-sitename fw-800">{{sitename}}</span>
+                {{/output.get_logo_url}}
+            </a>
+        </div>
+
+        {{! ── Center: Primary Navigation ── }}
+        <div class="d-none d-md-flex align-items-center flex-grow-1 mx-3">
+            {{#primarynavigation}}
+                {{{.}}}
+            {{/primarynavigation}}
+        </div>
+
+        {{! ── Right: Search + Lang + User Bubble ── }}
+        <div class="d-flex align-items-center gap-2 ms-auto">
+
+            {{! Search icon button }}
+            <button class="btn btn-icon rak-search-toggle d-none d-md-flex"
+                    aria-label="{{#str}} search {{/str}}"
+                    type="button">
+                <i class="fa fa-search" aria-hidden="true"></i>
+            </button>
+
+            {{! Language menu }}
+            {{#langmenu}}
+                {{{.}}}
+            {{/langmenu}}
+
+            {{! User menu — floating bubble }}
+            <div class="rak-user-bubble">
+                {{{usermenu}}}
+            </div>
+
+            {{! Block drawer toggle (if blocks exist) }}
+            {{#hasblocks}}
+            <button class="btn btn-icon nav-btn ms-1 p-1"
+                    data-action="toggle-drawer"
+                    data-target="theme_boost/drawers-blocks"
+                    data-toggle="drawer"
+                    aria-controls="theme_boost-drawers-blocks"
+                    aria-expanded="false"
+                    type="button">
+                <span class="visually-hidden">{{#str}} toggleblockdrawer, core {{/str}}</span>
+                <i class="fa fa-th-large fa-fw" aria-hidden="true"></i>
+            </button>
+            {{/hasblocks}}
+
+        </div>
+
+    </nav>
+</header>

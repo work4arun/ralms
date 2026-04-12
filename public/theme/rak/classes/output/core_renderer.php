@@ -214,7 +214,8 @@ class theme_rak_core_renderer extends theme_boost\output\core_renderer {
         $theme = theme_config::load('rak');
         $logo  = $theme->setting_file_url('logo', 'logo');
         if (empty($logo)) {
-            return parent::get_logo_url($maxwidth, $maxheight);
+            $parentlogo = parent::get_logo_url($maxwidth, $maxheight);
+            return $parentlogo ?: null;
         }
         return new moodle_url($logo);
     }

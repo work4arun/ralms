@@ -1,6 +1,7 @@
 {{!
-    Theme Classic Modern – standard layout template.
-    Modern Tailwind-based two-column layout (main + sidebar).
+    Theme Classic Modern – standard layout.
+    Claude-inspired dark grid theme. Dark by default, toggleable to light.
+    Fixes: darkMode:'class', full Moodle content overrides, dot-grid background.
 }}
 <!DOCTYPE html>
 <html {{{ bodyattributes }}}>
@@ -9,32 +10,443 @@
     <link rel="shortcut icon" href="{{{ output.favicon }}}" />
     {{{ output.standard_head_html }}}
 
-    {{! Tailwind CSS from CDN }}
+    {{! ── Fonts ── }}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700&display=swap">
+
+    {{! ── Tailwind CDN with darkMode:class ── }}
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        primary: '#3B82F6',
-                        accent:  '#8B5CF6'
+                        cm: {
+                            bg:        '#131313',
+                            surface:   '#1e1e1e',
+                            surfaceHi: '#252525',
+                            border:    '#2e2e2e',
+                            text:      '#e2e8f0',
+                            muted:     '#94a3b8',
+                            accent:    '#d97706',
+                            accentSoft:'#fbbf24',
+                            link:      '#93c5fd',
+                        }
                     }
                 }
             }
         }
     </script>
 
-    {{! Google Fonts }}
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700&display=swap">
+    {{! ── Critical: apply dark class BEFORE render to prevent FOUC ── }}
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('cm-theme');
+                if (t === 'light') {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
 
     <style>
+        /* ═══════════════════════════════════════════════
+           CSS VARIABLES
+        ═══════════════════════════════════════════════ */
+        :root {
+            --cm-bg:         #f5f5f5;
+            --cm-surface:    #ffffff;
+            --cm-surface-hi: #f0f0f0;
+            --cm-border:     rgba(0,0,0,0.10);
+            --cm-text:       #1a1a1a;
+            --cm-muted:      #6b7280;
+            --cm-accent:     #d97706;
+            --cm-link:       #2563eb;
+            --cm-dot:        rgba(0,0,0,0.07);
+        }
+        html.dark {
+            --cm-bg:         #131313;
+            --cm-surface:    #1e1e1e;
+            --cm-surface-hi: #252525;
+            --cm-border:     rgba(255,255,255,0.08);
+            --cm-text:       #e2e8f0;
+            --cm-muted:      #94a3b8;
+            --cm-accent:     #d97706;
+            --cm-link:       #93c5fd;
+            --cm-dot:        rgba(255,255,255,0.055);
+        }
+
+        /* ═══════════════════════════════════════════════
+           GLOBAL / RESET
+        ═══════════════════════════════════════════════ */
+        *, *::before, *::after { box-sizing: border-box; }
+
         body {
             font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--cm-bg);
+            color: var(--cm-text);
+            /* Dot-grid — Claude-style */
+            background-image: radial-gradient(circle, var(--cm-dot) 1px, transparent 1px);
+            background-size: 28px 28px;
+            background-attachment: fixed;
+            min-height: 100vh;
+            transition: background-color 0.2s, color 0.2s;
         }
         h1, h2, h3, h4, h5, h6 {
             font-family: 'Poppins', sans-serif;
+            color: var(--cm-text);
+        }
+        a             { color: var(--cm-link); text-decoration: none; }
+        a:hover       { text-decoration: underline; opacity: 0.85; }
+        p, li, span, label, td, th, div { color: var(--cm-text); }
+
+        /* ═══════════════════════════════════════════════
+           LAYOUT CHROME
+        ═══════════════════════════════════════════════ */
+        #page {
+            background: transparent !important;
+            color: var(--cm-text) !important;
+        }
+        #page-wrapper, .pagelayout-standard, .pagelayout-course,
+        .pagelayout-admin, [id^="page-"] {
+            background: transparent !important;
+            color: var(--cm-text) !important;
+        }
+
+        /* ═══════════════════════════════════════════════
+           CONTENT SURFACES (cards, blocks, boxes)
+        ═══════════════════════════════════════════════ */
+        .card, .box, .generalbox, .block, .block_tree,
+        .course-content, #region-main, .section-summary,
+        .activityinaccessible, .activity-wrapper,
+        .path-course-view .course-content ul.section,
+        .moodle-dialogue-base .moodle-dialogue-wrap {
+            background-color: var(--cm-surface) !important;
+            color: var(--cm-text) !important;
+            border-color: var(--cm-border) !important;
+        }
+        .card-body, .card-header, .card-footer {
+            background-color: transparent !important;
+            color: var(--cm-text) !important;
+        }
+
+        /* ═══════════════════════════════════════════════
+           NAV / BREADCRUMB (Moodle's Bootstrap navbar)
+        ═══════════════════════════════════════════════ */
+        .navbar, #nav-bar, .navbar-light, .navbar-expand-lg {
+            background-color: var(--cm-surface) !important;
+            border-bottom: 1px solid var(--cm-border) !important;
+            box-shadow: none !important;
+        }
+        .navbar-brand, .navbar-brand span,
+        .nav-link, .nav-item a {
+            color: var(--cm-text) !important;
+        }
+        .nav-link:hover { color: var(--cm-accent) !important; }
+        .breadcrumb { background: transparent !important; }
+        .breadcrumb-item, .breadcrumb-item a,
+        .breadcrumb-item + .breadcrumb-item::before {
+            color: var(--cm-muted) !important;
+        }
+        .breadcrumb-item.active { color: var(--cm-text) !important; }
+
+        /* ═══════════════════════════════════════════════
+           FORMS & INPUTS
+        ═══════════════════════════════════════════════ */
+        input, input[type="text"], input[type="email"],
+        input[type="password"], input[type="search"],
+        input[type="number"], input[type="url"],
+        select, textarea, .form-control, .custom-select {
+            background-color: var(--cm-surface-hi) !important;
+            color: var(--cm-text) !important;
+            border: 1px solid var(--cm-border) !important;
+            border-radius: 6px;
+        }
+        input:focus, textarea:focus, select:focus, .form-control:focus {
+            border-color: var(--cm-accent) !important;
+            box-shadow: 0 0 0 3px rgba(217,119,6,0.2) !important;
+            outline: none !important;
+        }
+        input::placeholder, textarea::placeholder { color: var(--cm-muted) !important; }
+        label, .col-form-label, .form-label { color: var(--cm-text) !important; }
+        .form-text, .help-block, .text-muted { color: var(--cm-muted) !important; }
+        .form-group, .fitem { margin-bottom: 1rem; }
+        .felement .form-check-label { color: var(--cm-text) !important; }
+
+        /* ═══════════════════════════════════════════════
+           BUTTONS
+        ═══════════════════════════════════════════════ */
+        .btn {
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.15s;
+        }
+        .btn-primary, input[type="submit"], button[type="submit"] {
+            background-color: var(--cm-accent) !important;
+            border-color: var(--cm-accent) !important;
+            color: #fff !important;
+        }
+        .btn-primary:hover, input[type="submit"]:hover, button[type="submit"]:hover {
+            background-color: #b45309 !important;
+            border-color: #b45309 !important;
+        }
+        .btn-secondary {
+            background-color: var(--cm-surface-hi) !important;
+            border-color: var(--cm-border) !important;
+            color: var(--cm-text) !important;
+        }
+        .btn-secondary:hover {
+            background-color: var(--cm-border) !important;
+        }
+        .btn-link { color: var(--cm-link) !important; }
+        .btn-danger  { background-color: #dc2626 !important; border-color: #dc2626 !important; color:#fff !important; }
+        .btn-success { background-color: #16a34a !important; border-color: #16a34a !important; color:#fff !important; }
+        .btn-warning { background-color: #ca8a04 !important; border-color: #ca8a04 !important; color:#fff !important; }
+
+        /* ═══════════════════════════════════════════════
+           TABLES
+        ═══════════════════════════════════════════════ */
+        table { border-collapse: collapse; width: 100%; }
+        th, td {
+            border: 1px solid var(--cm-border) !important;
+            padding: 0.6rem 0.9rem;
+            color: var(--cm-text) !important;
+        }
+        th {
+            background-color: var(--cm-surface-hi) !important;
+            font-weight: 600;
+        }
+        tr:nth-child(even) td { background-color: rgba(255,255,255,0.02) !important; }
+        html:not(.dark) tr:nth-child(even) td { background-color: rgba(0,0,0,0.02) !important; }
+        .table-striped tbody tr:nth-of-type(odd) {
+            background-color: rgba(255,255,255,0.025) !important;
+        }
+
+        /* ═══════════════════════════════════════════════
+           ALERTS / NOTICES
+        ═══════════════════════════════════════════════ */
+        .alert {
+            border-radius: 8px;
+            border: 1px solid var(--cm-border) !important;
+            background-color: var(--cm-surface-hi) !important;
+            color: var(--cm-text) !important;
+        }
+        .alert-info    { border-left: 4px solid #38bdf8 !important; }
+        .alert-success { border-left: 4px solid #4ade80 !important; }
+        .alert-warning { border-left: 4px solid #fbbf24 !important; }
+        .alert-danger  { border-left: 4px solid #f87171 !important; }
+        .alert h4, .alert strong { color: var(--cm-text) !important; }
+
+        /* ═══════════════════════════════════════════════
+           MODALS / DIALOGUES
+        ═══════════════════════════════════════════════ */
+        .modal-content, .moodle-dialogue-wrap .moodle-dialogue-hd,
+        .moodle-dialogue-wrap .moodle-dialogue-bd {
+            background-color: var(--cm-surface) !important;
+            color: var(--cm-text) !important;
+            border-color: var(--cm-border) !important;
+        }
+        .modal-header, .modal-footer {
+            border-color: var(--cm-border) !important;
+            background-color: var(--cm-surface-hi) !important;
+        }
+        .modal-title { color: var(--cm-text) !important; }
+        .close, .btn-close { color: var(--cm-text) !important; filter: invert(0); }
+
+        /* ═══════════════════════════════════════════════
+           COURSE / ACTIVITY ITEMS
+        ═══════════════════════════════════════════════ */
+        .activity, .section li.activity {
+            background-color: var(--cm-surface) !important;
+            border: 1px solid var(--cm-border) !important;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+        }
+        .activity .instancename, .activityinstance .instancename,
+        .section-title, .sectionname {
+            color: var(--cm-text) !important;
+        }
+        .section-summary-activities .activity-icon { filter: none; }
+        .course-info-container { color: var(--cm-muted) !important; }
+
+        /* ═══════════════════════════════════════════════
+           DROPDOWN / MENUS
+        ═══════════════════════════════════════════════ */
+        .dropdown-menu {
+            background-color: var(--cm-surface) !important;
+            border: 1px solid var(--cm-border) !important;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+            border-radius: 10px !important;
+        }
+        .dropdown-item {
+            color: var(--cm-text) !important;
+            border-radius: 6px !important;
+        }
+        .dropdown-item:hover, .dropdown-item:focus {
+            background-color: var(--cm-surface-hi) !important;
+            color: var(--cm-accent) !important;
+        }
+        .dropdown-divider { border-color: var(--cm-border) !important; }
+        .dropdown-header { color: var(--cm-muted) !important; }
+
+        /* ═══════════════════════════════════════════════
+           BADGES / PILLS
+        ═══════════════════════════════════════════════ */
+        .badge {
+            font-weight: 500;
+            border-radius: 999px;
+            padding: 0.2em 0.65em;
+        }
+        .badge-primary, .badge.bg-primary { background-color: var(--cm-accent) !important; color:#fff!important; }
+
+        /* ═══════════════════════════════════════════════
+           PAGINATION
+        ═══════════════════════════════════════════════ */
+        .page-item .page-link {
+            background-color: var(--cm-surface) !important;
+            border-color: var(--cm-border) !important;
+            color: var(--cm-text) !important;
+        }
+        .page-item.active .page-link {
+            background-color: var(--cm-accent) !important;
+            border-color: var(--cm-accent) !important;
+            color: #fff !important;
+        }
+        .page-item.disabled .page-link { color: var(--cm-muted) !important; }
+
+        /* ═══════════════════════════════════════════════
+           ADMIN / SETTINGS PAGES
+        ═══════════════════════════════════════════════ */
+        #adminsettings, .settingsform, .mform {
+            background-color: transparent !important;
+            color: var(--cm-text) !important;
+        }
+        .settingsform .fcontainer, .mform .fcontainer {
+            background-color: var(--cm-surface) !important;
+            border-radius: 10px;
+            border: 1px solid var(--cm-border) !important;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* ═══════════════════════════════════════════════
+           SCROLLBAR STYLING
+        ═══════════════════════════════════════════════ */
+        ::-webkit-scrollbar              { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track        { background: var(--cm-bg); }
+        ::-webkit-scrollbar-thumb        { background: var(--cm-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover  { background: var(--cm-muted); }
+
+        /* ═══════════════════════════════════════════════
+           THEME TOGGLE BUTTON
+        ═══════════════════════════════════════════════ */
+        #cm-theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--cm-border);
+            background: var(--cm-surface-hi);
+            color: var(--cm-text);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        #cm-theme-toggle:hover {
+            border-color: var(--cm-accent);
+            color: var(--cm-accent);
+        }
+        #cm-theme-toggle .icon-dark  { display: none; }
+        #cm-theme-toggle .icon-light { display: inline; }
+        html.dark #cm-theme-toggle .icon-dark  { display: inline; }
+        html.dark #cm-theme-toggle .icon-light { display: none; }
+
+        /* ═══════════════════════════════════════════════
+           HEADER CHROME
+        ═══════════════════════════════════════════════ */
+        #cm-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: var(--cm-surface);
+            border-bottom: 1px solid var(--cm-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        #cm-header .site-name {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            font-size: 1.15rem;
+            color: var(--cm-text);
+            text-decoration: none;
+        }
+        html.dark #cm-header .site-name {
+            background: linear-gradient(135deg, #fbbf24, #d97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ═══════════════════════════════════════════════
+           CONTENT WRAPPERS
+        ═══════════════════════════════════════════════ */
+        #cm-main {
+            background-color: var(--cm-surface);
+            border-radius: 12px;
+            border: 1px solid var(--cm-border);
+            padding: 1.75rem;
+        }
+        #cm-sidebar .block {
+            background-color: var(--cm-surface) !important;
+            border-radius: 10px !important;
+            border: 1px solid var(--cm-border) !important;
+        }
+        .block .header, .block-header {
+            background-color: var(--cm-surface-hi) !important;
+            border-bottom: 1px solid var(--cm-border) !important;
+            color: var(--cm-text) !important;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 0.65rem 1rem !important;
+        }
+        .block-title, .block .title {
+            color: var(--cm-text) !important;
+            font-weight: 600 !important;
+        }
+        .block .content { color: var(--cm-text) !important; }
+
+        /* ═══════════════════════════════════════════════
+           FOOTER
+        ═══════════════════════════════════════════════ */
+        #cm-footer {
+            background-color: var(--cm-surface);
+            border-top: 1px solid var(--cm-border);
+            color: var(--cm-muted);
+        }
+        #cm-footer a { color: var(--cm-muted); }
+        #cm-footer a:hover { color: var(--cm-text); }
+
+        /* Light mode overrides for anything that still looks wrong */
+        html:not(.dark) .card { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        html:not(.dark) #cm-header { background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        html:not(.dark) #cm-main   { background-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+        /* Accessibility: focus ring */
+        :focus-visible {
+            outline: 2px solid var(--cm-accent);
+            outline-offset: 2px;
         }
     </style>
 
@@ -44,56 +456,54 @@
 <body {{{ bodyattributes }}}>
 {{{ output.standard_top_of_body_html }}}
 
-<div id="page" class="flex flex-col min-h-screen bg-white dark:bg-gray-950">
+<div id="page" class="flex flex-col min-h-screen">
 
-    {{! Header }}
-    {{> theme_classic_modern/header }}
+    {{! ── Sticky Header ── }}
+    <header id="cm-header">
+        {{> theme_classic_modern/header }}
+    </header>
 
-    {{! Main content area }}
-    <div class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+    {{! ── Page body ── }}
+    <div class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         {{! Breadcrumbs }}
-        <div class="mb-6">
+        <nav class="mb-4 text-sm" aria-label="breadcrumb">
             {{{ output.navbar }}}
-        </div>
+        </nav>
 
-        {{! Page heading }}
+        {{! Page heading / activity header }}
         {{#headercontent}}
-            <div class="mb-8">
+            <div class="mb-6 pb-4" style="border-bottom:1px solid var(--cm-border)">
                 {{> core/activity_header }}
             </div>
         {{/headercontent}}
 
-        {{! Main content + sidebar }}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {{! Two-column layout }}
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-            {{! Main content (2/3 width) }}
-            <main id="region-main" class="lg:col-span-2">
+            {{! Main (3/4) }}
+            <main id="cm-main" class="lg:col-span-3">
                 {{{ output.main_content }}}
                 {{{ output.activity_navigation }}}
             </main>
 
-            {{! Sidebar (1/3 width) }}
+            {{! Sidebar (1/4) }}
             {{#hasblocks}}
-                <aside id="block-region" class="lg:col-span-1">
-                    <div class="space-y-6">
-                        {{{ sidepreblocks }}}
-                    </div>
+                <aside id="cm-sidebar" class="lg:col-span-1 space-y-4">
+                    {{{ sidepreblocks }}}
                 </aside>
             {{/hasblocks}}
 
         </div>
     </div>
 
-    {{! Footer }}
-    <footer class="mt-auto border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 py-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center text-sm text-gray-600 dark:text-gray-400">
-                <span>{{{ sitename }}}</span>
-                <div class="flex gap-6">
-                    {{{ output.home_link }}}
-                    {{{ output.login_info }}}
-                </div>
+    {{! ── Footer ── }}
+    <footer id="cm-footer" class="mt-8 py-5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap justify-between items-center gap-3 text-sm">
+            <span style="color:var(--cm-muted)">© {{{ sitename }}}</span>
+            <div class="flex gap-5" style="color:var(--cm-muted)">
+                {{{ output.home_link }}}
+                {{{ output.login_info }}}
             </div>
         </div>
     </footer>
@@ -104,16 +514,16 @@
 {{{ output.standard_end_of_body_html }}}
 
 <script>
-    // Dark mode toggle
-    document.getElementById('cm-darkmode-toggle').addEventListener('click', function() {
-        document.documentElement.classList.toggle('dark');
-        localStorage.setItem('cm-dark-mode', document.documentElement.classList.contains('dark'));
-    });
-
-    // Restore dark mode preference on load
-    if (localStorage.getItem('cm-dark-mode') === 'true' || (!localStorage.getItem('cm-dark-mode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-    }
+    // ── Theme toggle ──────────────────────────────────────────
+    (function () {
+        var btn = document.getElementById('cm-theme-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            var isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('cm-theme', isDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        });
+    })();
 </script>
 
 </body>

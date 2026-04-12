@@ -1,6 +1,7 @@
 {{!
     Theme Classic Modern – login page.
-    Modern split-screen design with gradient hero and glass card.
+    Claude-inspired dark grid, glass card, amber accents.
+    Dark by default, toggleable to light.
 }}
 <!DOCTYPE html>
 <html {{{ bodyattributes }}}>
@@ -9,126 +10,250 @@
     <link rel="shortcut icon" href="{{{ output.favicon }}}" />
     {{{ output.standard_head_html }}}
 
-    {{! Tailwind CSS }}
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3B82F6',
-                        accent:  '#8B5CF6'
-                    }
-                }
-            }
-        }
-    </script>
-
-    {{! Google Fonts }}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700&display=swap">
 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
+
+    {{! Apply dark class BEFORE render (prevents flash) }}
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('cm-theme');
+                if (t === 'light') {
+                    document.documentElement.classList.remove('dark');
+                } else {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch(e) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+
     <style>
-        body { font-family: 'Inter', system-ui, sans-serif; }
-        h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', sans-serif; }
+        /* ── Variables ── */
+        :root {
+            --cm-bg:         #f5f5f5;
+            --cm-surface:    #ffffff;
+            --cm-surface-hi: #f0f0f0;
+            --cm-border:     rgba(0,0,0,0.10);
+            --cm-text:       #1a1a1a;
+            --cm-muted:      #6b7280;
+            --cm-accent:     #d97706;
+            --cm-link:       #2563eb;
+            --cm-dot:        rgba(0,0,0,0.07);
+        }
+        html.dark {
+            --cm-bg:         #131313;
+            --cm-surface:    #1e1e1e;
+            --cm-surface-hi: #252525;
+            --cm-border:     rgba(255,255,255,0.08);
+            --cm-text:       #e2e8f0;
+            --cm-muted:      #94a3b8;
+            --cm-accent:     #d97706;
+            --cm-link:       #93c5fd;
+            --cm-dot:        rgba(255,255,255,0.055);
+        }
+
+        /* ── Base ── */
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--cm-bg);
+            color: var(--cm-text);
+            background-image: radial-gradient(circle, var(--cm-dot) 1px, transparent 1px);
+            background-size: 28px 28px;
+            background-attachment: fixed;
+            min-height: 100vh;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Poppins', sans-serif;
+            color: var(--cm-text);
+        }
+        a             { color: var(--cm-link); }
+        a:hover       { opacity: 0.8; }
+        p, span, label, div { color: var(--cm-text); }
+
+        /* ── Form overrides (Moodle injects Bootstrap forms) ── */
+        input, input[type="text"], input[type="email"],
+        input[type="password"], input[type="search"],
+        select, textarea, .form-control {
+            background-color: var(--cm-surface-hi) !important;
+            color: var(--cm-text) !important;
+            border: 1px solid var(--cm-border) !important;
+            border-radius: 8px !important;
+            padding: 0.6rem 0.85rem !important;
+        }
+        input:focus, .form-control:focus {
+            border-color: var(--cm-accent) !important;
+            box-shadow: 0 0 0 3px rgba(217,119,6,0.22) !important;
+            outline: none !important;
+        }
+        input::placeholder { color: var(--cm-muted) !important; }
+        label, .col-form-label { color: var(--cm-text) !important; font-weight: 500; }
+        .form-text, .help-block { color: var(--cm-muted) !important; font-size: 0.82rem; }
+
+        .btn-primary, input[type="submit"], button[type="submit"] {
+            background-color: var(--cm-accent) !important;
+            border-color: var(--cm-accent) !important;
+            color: #fff !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+            padding: 0.55rem 1.25rem !important;
+            transition: background-color 0.15s !important;
+        }
+        .btn-primary:hover, input[type="submit"]:hover, button[type="submit"]:hover {
+            background-color: #b45309 !important;
+            border-color: #b45309 !important;
+        }
+        .btn-secondary {
+            background-color: var(--cm-surface-hi) !important;
+            border-color: var(--cm-border) !important;
+            color: var(--cm-text) !important;
+            border-radius: 8px !important;
+        }
+
+        .alert {
+            background-color: var(--cm-surface-hi) !important;
+            color: var(--cm-text) !important;
+            border: 1px solid var(--cm-border) !important;
+            border-radius: 8px !important;
+        }
+        .alert-danger  { border-left: 4px solid #f87171 !important; }
+        .alert-success { border-left: 4px solid #4ade80 !important; }
+
+        /* ── Login card ── */
+        .cm-login-wrap {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+        .cm-login-card {
+            width: 100%;
+            max-width: 420px;
+            background-color: var(--cm-surface);
+            border: 1px solid var(--cm-border);
+            border-radius: 16px;
+            padding: 2.5rem 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+        }
+        html:not(.dark) .cm-login-card {
+            box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+        }
+        .cm-logo-mark {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+        }
+
+        /* ── Toggle button ── */
+        #cm-theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--cm-border);
+            background: var(--cm-surface);
+            color: var(--cm-text);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.15s;
+        }
+        #cm-theme-toggle:hover { border-color: var(--cm-accent); color: var(--cm-accent); }
+        #cm-theme-toggle .icon-dark  { display: none; }
+        #cm-theme-toggle .icon-light { display: inline; }
+        html.dark #cm-theme-toggle .icon-dark  { display: inline; }
+        html.dark #cm-theme-toggle .icon-light { display: none; }
+
+        /* scrollbar */
+        ::-webkit-scrollbar              { width: 8px; }
+        ::-webkit-scrollbar-track        { background: var(--cm-bg); }
+        ::-webkit-scrollbar-thumb        { background: var(--cm-border); border-radius: 4px; }
     </style>
 
     {{{ output.standard_top_of_body_html_head }}}
 </head>
 
-<body {{{ bodyattributes }}} class="bg-gradient-to-br from-blue-50 via-purple-50 to-blue-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+<body {{{ bodyattributes }}}>
 {{{ output.standard_top_of_body_html }}}
 
-<div class="min-h-screen flex">
-
-    {{! Left panel — hero (hidden on mobile) }}
-    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-purple-600 flex-col justify-between p-12 relative overflow-hidden">
-
-        {{! Decorative blobs }}
-        <div class="absolute top-0 right-0 w-96 h-96 bg-white opacity-10 rounded-full -mr-48 -mt-48"></div>
-        <div class="absolute bottom-0 left-0 w-80 h-80 bg-blue-400 opacity-20 rounded-full -ml-40 -mb-40"></div>
-
-        <div class="relative z-10">
-            <h1 class="text-5xl font-bold text-white mb-4">Welcome to {{sitename}}</h1>
-            <p class="text-blue-100 text-lg leading-relaxed max-w-md">
-                A modern learning platform designed for collaboration, engagement, and success. Sign in to continue your journey.
-            </p>
-        </div>
-
-        <div class="relative z-10 space-y-4">
-            <div class="flex items-start gap-3">
-                <svg class="w-6 h-6 text-blue-200 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></path></svg>
-                <p class="text-blue-100">Fast, intuitive course experience</p>
-            </div>
-            <div class="flex items-start gap-3">
-                <svg class="w-6 h-6 text-blue-200 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></path></svg>
-                <p class="text-blue-100">Responsive design on all devices</p>
-            </div>
-            <div class="flex items-start gap-3">
-                <svg class="w-6 h-6 text-blue-200 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></path></svg>
-                <p class="text-blue-100">Built with modern web standards</p>
-            </div>
-        </div>
-    </div>
-
-    {{! Right panel — login card }}
-    <div class="flex-1 flex items-center justify-center p-4 lg:w-1/2">
-        <div class="w-full max-w-md">
-
-            {{! Card }}
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 backdrop-blur-xl bg-opacity-95">
-
-                {{! Header }}
-                <div class="text-center mb-8">
-                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Sign In</h2>
-                    <p class="text-gray-600 dark:text-gray-400">Enter your credentials to continue</p>
-                </div>
-
-                {{! Language menu }}
-                {{#langmenu}}
-                    <div class="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
-                        {{> core/action_menu}}
-                    </div>
-                {{/langmenu}}
-
-                {{! Login form (injected by Moodle) }}
-                <div class="space-y-4">
-                    {{{ output.main_content }}}
-                </div>
-
-            </div>
-
-            {{! Footer link }}
-            <p class="text-center text-sm text-gray-600 dark:text-gray-400 mt-6">
-                Having trouble? <a href="#" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">Contact support</a>
-            </p>
-
-        </div>
-    </div>
-
-</div>
-
-{{! Dark mode toggle (top right) }}
-<button id="cm-darkmode-toggle" class="fixed top-4 right-4 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg hover:shadow-xl transition z-50"
-        aria-label="Toggle dark mode">
-    <svg class="w-5 h-5 text-gray-600 dark:hidden" fill="currentColor" viewBox="0 0 20 20">
-        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+{{! ── Dark / Light toggle ── }}
+<button id="cm-theme-toggle" aria-label="Toggle theme">
+    <svg class="icon-light" style="width:15px;height:15px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
     </svg>
-    <svg class="w-5 h-5 text-yellow-500 hidden dark:block" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.536l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.121-10.071l.707-.707a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 103.636 5.05l-.707.707a1 1 0 001.414 1.414l.707-.707zm5.414 5.414a1 1 0 01-1.414 0L7.05 10.364a1 1 0 011.414-1.414l2.121 2.121zM5 8a1 1 0 100-2H4a1 1 0 100 2h1z" clip-rule="evenodd"></path>
+    <svg class="icon-dark" style="width:15px;height:15px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="5"/>
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
     </svg>
+    <span class="icon-dark">Light</span>
+    <span class="icon-light">Dark</span>
 </button>
+
+<div class="cm-login-wrap">
+    <div class="cm-login-card">
+
+        {{! Logo mark }}
+        <div class="cm-logo-mark">
+            <svg style="width:24px;height:24px" viewBox="0 0 24 24" fill="none">
+                <path d="M7 12h10M12 7v10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+        </div>
+
+        {{! Heading }}
+        <div style="text-align:center;margin-bottom:1.75rem">
+            <h1 style="font-size:1.5rem;font-weight:700;margin:0 0 0.4rem;color:var(--cm-text)">
+                Sign in to {{sitename}}
+            </h1>
+            <p style="font-size:0.875rem;color:var(--cm-muted);margin:0">
+                Enter your credentials to continue
+            </p>
+        </div>
+
+        {{! Language menu }}
+        {{#langmenu}}
+            <div style="margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--cm-border)">
+                {{> core/action_menu}}
+            </div>
+        {{/langmenu}}
+
+        {{! Moodle injects the login form here }}
+        <div>
+            {{{ output.main_content }}}
+        </div>
+
+    </div>
+</div>
 
 {{{ output.standard_after_main_region_html }}}
 {{{ output.standard_end_of_body_html }}}
 
 <script>
-    document.getElementById('cm-darkmode-toggle').addEventListener('click', function() {
-        document.documentElement.classList.toggle('dark');
-        localStorage.setItem('cm-dark-mode', document.documentElement.classList.contains('dark'));
+    document.getElementById('cm-theme-toggle').addEventListener('click', function () {
+        var isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('cm-theme', isDark ? 'dark' : 'light');
     });
-    if (localStorage.getItem('cm-dark-mode') === 'true' || (!localStorage.getItem('cm-dark-mode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-    }
 </script>
 
 </body>

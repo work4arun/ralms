@@ -1,3 +1,4 @@
+{{! Theme Classic Modern – popup / lightbox layout }}
 <!DOCTYPE html>
 <html {{{ bodyattributes }}}>
 <head>
@@ -5,11 +6,36 @@
     <link rel="shortcut icon" href="{{{ output.favicon }}}" />
     {{{ output.standard_head_html }}}
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script>(function(){ if(localStorage.getItem('cm-theme')!=='light') document.documentElement.classList.add('dark'); })();</script>
+    <style>
+        :root     { --cm-bg:#f5f5f5; --cm-surface:#fff;    --cm-border:rgba(0,0,0,0.10);  --cm-text:#1a1a1a; --cm-dot:rgba(0,0,0,0.07); }
+        html.dark { --cm-bg:#131313; --cm-surface:#1e1e1e; --cm-border:rgba(255,255,255,0.08); --cm-text:#e2e8f0; --cm-dot:rgba(255,255,255,0.055); }
+        body {
+            font-family: system-ui, sans-serif;
+            background-color: var(--cm-surface);
+            color: var(--cm-text);
+            margin: 0;
+        }
+        p, span, div, h1, h2, h3, h4, h5, h6, label, td, th { color: var(--cm-text); }
+        a { color: #93c5fd; }
+        input, textarea, select, .form-control {
+            background-color: var(--cm-bg) !important;
+            color: var(--cm-text) !important;
+            border: 1px solid var(--cm-border) !important;
+            border-radius: 6px !important;
+        }
+        .btn-primary {
+            background-color: #d97706 !important;
+            border-color: #d97706 !important;
+            color: #fff !important;
+        }
+    </style>
     {{{ output.standard_top_of_body_html_head }}}
 </head>
 <body {{{ bodyattributes }}}>
 {{{ output.standard_top_of_body_html }}}
-<div class="p-4">
+<div style="padding:1.25rem">
     {{{ output.main_content }}}
 </div>
 {{{ output.standard_end_of_body_html }}}

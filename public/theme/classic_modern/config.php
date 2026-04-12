@@ -17,6 +17,10 @@
 /**
  * Theme Classic Modern configuration.
  *
+ * A modern, glassy visual refresh layered on top of Boost.
+ * Inherits ALL Boost layouts, navigation, and Bootstrap.
+ * Customisation is CSS-only — nothing structural is changed.
+ *
  * @package    theme_classic_modern
  * @copyright  2026 Classic Modern Contributors
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -29,123 +33,29 @@ require_once(__DIR__ . '/lib.php');
 $THEME->name = 'classic_modern';
 
 // ───────────────────────────────────────────────────────────────────────────
-// No parent — standalone modern theme built with Tailwind CSS
+// Inherit Boost — gives us Bootstrap 4, standard nav, drawers, course index
 // ───────────────────────────────────────────────────────────────────────────
-$THEME->parents = [];
+$THEME->parents = ['boost'];
 
 // ───────────────────────────────────────────────────────────────────────────
-// Stylesheets — Tailwind loaded via CDN in templates, no SCSS compilation
+// CSS-only theming — no custom SCSS compilation
+// style/modern.css is loaded AFTER Boost's compiled CSS
 // ───────────────────────────────────────────────────────────────────────────
-$THEME->sheets        = [];
+$THEME->sheets        = ['modern'];
 $THEME->editor_sheets = [];
 $THEME->editor_scss   = [];
-$THEME->scss          = false;  // No SCSS compilation needed
+$THEME->scss          = false;
 
 // ───────────────────────────────────────────────────────────────────────────
-// Layouts — all major Moodle layouts supported
+// NO custom layouts — inherit every single one from Boost unchanged.
+// All layout/*.php and templates/*.mustache from Boost are used as-is.
 // ───────────────────────────────────────────────────────────────────────────
-$THEME->layouts = [
-    'base' => [
-        'file'    => 'base.php',
-        'regions' => [],
-    ],
-    'standard' => [
-        'file'           => 'standard.php',
-        'regions'        => ['side-pre'],
-        'defaultregion'  => 'side-pre',
-    ],
-    'course' => [
-        'file'           => 'standard.php',
-        'regions'        => ['side-pre'],
-        'defaultregion'  => 'side-pre',
-        'options'        => ['langmenu' => true],
-    ],
-    'coursecategory' => [
-        'file'          => 'standard.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-    ],
-    'incourse' => [
-        'file'          => 'standard.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-    ],
-    'frontpage' => [
-        'file'          => 'standard.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-        'options'       => ['nonavbar' => true],
-    ],
-    'admin' => [
-        'file'          => 'standard.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-    ],
-    'mycourses' => [
-        'file'          => 'standard.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-        'options'       => ['nonavbar' => true],
-    ],
-    'mydashboard' => [
-        'file'          => 'standard.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-        'options'       => ['nonavbar' => true, 'langmenu' => true],
-    ],
-    'mypublic' => [
-        'file'          => 'standard.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-    ],
-    'login' => [
-        'file'    => 'login.php',
-        'regions' => [],
-        'options' => ['langmenu' => true],
-    ],
-    'popup' => [
-        'file'    => 'popup.php',
-        'regions' => [],
-        'options' => [
-            'nofooter'  => true,
-            'nonavbar'  => true,
-            'activityheader' => ['notitle' => true, 'nocompletion' => true, 'nodescription' => true],
-        ],
-    ],
-    'embedded' => [
-        'file'          => 'embedded.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-    ],
-    'maintenance' => [
-        'file'    => 'maintenance.php',
-        'regions' => [],
-    ],
-    'print' => [
-        'file'    => 'popup.php',
-        'regions' => [],
-        'options' => ['nofooter' => true, 'nonavbar' => false, 'noactivityheader' => true],
-    ],
-    'redirect' => [
-        'file'    => 'embedded.php',
-        'regions' => [],
-    ],
-    'report' => [
-        'file'          => 'standard.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-    ],
-    'secure' => [
-        'file'          => 'secure.php',
-        'regions'       => ['side-pre'],
-        'defaultregion' => 'side-pre',
-    ],
-];
+// (Do not define $THEME->layouts — Moodle falls through to Boost)
 
 // ───────────────────────────────────────────────────────────────────────────
-// Theme settings
+// Theme capabilities
 // ───────────────────────────────────────────────────────────────────────────
-$THEME->enable_dock         = true;
+$THEME->enable_dock         = false;
 $THEME->yuicssmodules       = [];
 $THEME->rendererfactory     = 'theme_overridden_renderer_factory';
 $THEME->requiredblocks      = '';

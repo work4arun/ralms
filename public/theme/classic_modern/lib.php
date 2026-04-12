@@ -17,14 +17,21 @@
 /**
  * Theme Classic Modern – lib.php
  *
- * Utilities for theme configuration, logo serving, and custom CSS injection.
- *
  * @package    theme_classic_modern
  * @copyright  2026 Classic Modern Contributors
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
+
+/**
+ * Inject the Google Fonts <link> into every page.
+ *
+ * @param moodle_page $page
+ */
+function theme_classic_modern_page_init(\moodle_page $page) {
+    // Nothing extra needed — font is loaded via @import in style/modern.css.
+}
 
 /**
  * Serves files from the theme's file areas (logo, etc.).
@@ -48,30 +55,4 @@ function theme_classic_modern_pluginfile($course, $cm, $context, $filearea, $arg
         die;
     }
     send_file_not_found();
-}
-
-/**
- * Returns custom CSS to inject after Tailwind compiles.
- *
- * This is where we add theme-specific overrides and custom utilities
- * that Tailwind's core doesn't cover.
- *
- * @param theme_config $theme
- * @return string
- */
-function theme_classic_modern_get_extra_css($theme) {
-    $css = '';
-
-    // Logo background image
-    $logourl = $theme->setting_file_url('logo', 'logo');
-    if (!empty($logourl)) {
-        $css .= '.cm-navbar-brand-logo { background-image: url("' . $logourl . '"); }' . "\n";
-    }
-
-    // Custom CSS from admin settings
-    if (!empty($theme->settings->customcss)) {
-        $css .= $theme->settings->customcss . "\n";
-    }
-
-    return $css;
 }

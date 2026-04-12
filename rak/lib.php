@@ -41,16 +41,16 @@ function theme_rak_get_main_scss_content($theme) {
             $scss .= $themepresetfile->get_content();
         } else {
             // Fallback to Boost preset.
-            $scss .= file_get_contents($CFG->dirroot . '/theme/boost/scss/preset/default.scss');
+            $scss .= file_get_contents($CFG->dirroot . '/public/theme/boost/scss/preset/default.scss');
         }
     } else {
-        $scss .= file_get_contents($CFG->dirroot . '/theme/boost/scss/preset/default.scss');
+        $scss .= file_get_contents($CFG->dirroot . '/public/theme/boost/scss/preset/default.scss');
     }
 
     // ------------------------------------------------------------------ //
     // 2. Append our post.scss overrides.                                  //
     // ------------------------------------------------------------------ //
-    $post = file_get_contents($CFG->dirroot . '/theme/rak/scss/post.scss');
+    $post = file_get_contents(__DIR__ . '/scss/post.scss');
     $scss .= "\n" . $post;
 
     return $scss;

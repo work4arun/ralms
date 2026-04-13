@@ -925,11 +925,14 @@ html.dark .btn-close { filter: invert(1) !important; }
     border-bottom: 1.5px solid var(--cm-border) !important;
     margin-bottom: 0.875rem !important;
 }
-.section .sectionname, .course-section .section-title {
+.section .sectionname,
+.course-section .section-title,
+.section .sectionname a,
+.course-section .section-title a {
     font-family: var(--font-head) !important;
     font-size: 1rem !important;
     font-weight: 800 !important;
-    color: var(--cm-text) !important;
+    color: #595959 !important;
     letter-spacing: -0.02em !important;
 }
 

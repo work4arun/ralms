@@ -1,8 +1,7 @@
 {{!
-    Theme Classic Modern — standard layout.
-    Professional, learner-focused Moodle theme.
-    Features: dark/light toggle, focus mode, reading progress bar,
-              clean grid, learning-aware sidebar.
+    Theme Classic Modern — Cobalt Professional
+    Features: animated entrance, reading progress, focus mode, blue gradient system,
+              keyboard shortcuts, staggered content animations
 }}
 <!DOCTYPE html>
 <html {{{ bodyattributes }}}>
@@ -11,18 +10,14 @@
     <link rel="shortcut icon" href="{{{ output.favicon }}}" />
     {{{ output.standard_head_html }}}
 
-    {{! ── Fonts ── }}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
-    {{! ── Tailwind CDN with darkMode:class ── }}
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
 
-    {{! ── Anti-FOUC: apply dark class BEFORE render ── }}
+    {{! Anti-FOUC — apply dark + focus state before first paint }}
     <script>
         (function () {
             try {
@@ -34,59 +29,81 @@
                     document.documentElement.classList.add('dark');
                     document.documentElement.setAttribute('data-theme', 'dark');
                 }
-                if (localStorage.getItem('cm-focus') === '1') {
-                    document.body && document.body.classList.add('cm-focus-mode');
-                }
-            } catch (e) {
-                document.documentElement.classList.add('dark');
-            }
+            } catch (e) { document.documentElement.classList.add('dark'); }
         })();
     </script>
 
     <style>
-        /* ── CSS Variables (light defaults — dark overrides via html.dark) ── */
+        /* ═════════════════════════════════════════
+           CSS VARIABLES — Blue Professional System
+        ═════════════════════════════════════════ */
         :root {
-            --cm-bg:           #f6f6f4;
+            --cm-bg:           #f0f4ff;
             --cm-surface:      #ffffff;
-            --cm-surface-hi:   #f0efec;
-            --cm-surface-lo:   #fafaf8;
-            --cm-border:       rgba(0,0,0,0.09);
-            --cm-border-strong:rgba(0,0,0,0.18);
-            --cm-text:         #1a1a1a;
-            --cm-text-sub:     #4b5563;
-            --cm-muted:        #6b7280;
-            --cm-accent:       #d97706;
-            --cm-accent-soft:  #fbbf24;
-            --cm-accent-dark:  #b45309;
-            --cm-link:         #1d4ed8;
-            --cm-dot:          rgba(0,0,0,0.055);
-            --cm-nav-h:        60px;
+            --cm-surface-hi:   #e8effe;
+            --cm-border:       rgba(37,99,235,0.12);
+            --cm-border-strong:rgba(37,99,235,0.28);
+            --cm-text:         #0f172a;
+            --cm-text-sub:     #334155;
+            --cm-muted:        #64748b;
+            --cm-accent:       #2563eb;
+            --cm-accent-glow:  rgba(59,130,246,0.35);
+            --cm-link:         #2563eb;
+            --cm-dot:          rgba(37,99,235,0.07);
+            --cm-nav-h:        64px;
+            --grad-primary:    linear-gradient(135deg, #2563eb 0%, #6366f1 100%);
+            --grad-subtle:     linear-gradient(135deg, rgba(59,130,246,0.07) 0%, rgba(99,102,241,0.04) 100%);
+            --sh-sm:           0 4px 6px rgba(37,99,235,0.08), 0 2px 4px rgba(0,0,0,0.04);
         }
         html.dark {
-            --cm-bg:           #111111;
-            --cm-surface:      #1a1a1a;
-            --cm-surface-hi:   #222222;
-            --cm-surface-lo:   #151515;
-            --cm-border:       rgba(255,255,255,0.08);
-            --cm-border-strong:rgba(255,255,255,0.18);
-            --cm-text:         #e8e6e1;
-            --cm-text-sub:     #a8a29e;
-            --cm-muted:        #78716c;
+            --cm-bg:           #060b18;
+            --cm-surface:      #0d1424;
+            --cm-surface-hi:   #141d32;
+            --cm-border:       rgba(96,165,250,0.12);
+            --cm-border-strong:rgba(96,165,250,0.28);
+            --cm-text:         #e2e8f0;
+            --cm-text-sub:     #94a3b8;
+            --cm-muted:        #475569;
+            --cm-accent:       #60a5fa;
+            --cm-accent-glow:  rgba(96,165,250,0.28);
             --cm-link:         #93c5fd;
-            --cm-dot:          rgba(255,255,255,0.04);
+            --cm-dot:          rgba(96,165,250,0.05);
+            --grad-subtle:     linear-gradient(135deg, rgba(96,165,250,0.07) 0%, rgba(129,140,248,0.04) 100%);
         }
 
-        /* ── Minimal layout glue (component styles live in modern.css) ── */
+        /* ═════════════════════════════════════════
+           LAYOUT TRANSPARENCY (let body bg show)
+        ═════════════════════════════════════════ */
         *, *::before, *::after { box-sizing: border-box; }
-
-        /* Moodle override — make everything transparent so our BG shows */
         #page, #page-wrapper, .pagelayout-standard, .pagelayout-course,
         .pagelayout-admin, [id^="page-"] {
             background: transparent !important;
             color: var(--cm-text) !important;
         }
-        /* Remove Boost's own header */
         #page-header { background: transparent !important; }
+
+        /* Focus mode */
+        body.cm-focus-mode .drawer,
+        body.cm-focus-mode [data-region="left-hand-drawer"],
+        body.cm-focus-mode [data-region="right-hand-drawer"],
+        body.cm-focus-mode #cm-sidebar,
+        body.cm-focus-mode #nav-drawer { display: none !important; }
+        body.cm-focus-mode #cm-main {
+            max-width: 820px; margin: 0 auto;
+        }
+        body.cm-focus-mode .cm-focus-btn {
+            color: #60a5fa !important;
+            background: rgba(59,130,246,0.12) !important;
+            border-color: #60a5fa !important;
+        }
+
+        /* Page grid */
+        .cm-page-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 1024px) {
+            .cm-page-grid { grid-template-columns: 1fr 300px; }
+            #cm-sidebar  { display: flex; flex-direction: column; gap: 1rem; }
+        }
+        @media (max-width: 1023px) { #cm-sidebar { display: none; } }
     </style>
 
     {{{ output.standard_top_of_body_html_head }}}
@@ -95,35 +112,34 @@
 <body {{{ bodyattributes }}}>
 {{{ output.standard_top_of_body_html }}}
 
-{{! ── Reading progress bar (fixed top) ── }}
+{{! ── Reading progress bar ── }}
 <div id="cm-read-progress" aria-hidden="true"></div>
 
 <div id="page" style="display:flex;flex-direction:column;min-height:100vh">
 
-    {{! ══════════════════════════════════════
-        STICKY HEADER
-    ══════════════════════════════════════ }}
+    {{! ══════════════════
+        HEADER
+    ══════════════════ }}
     <header id="cm-header">
         {{> theme_classic_modern/header }}
     </header>
 
-    {{! ══════════════════════════════════════
-        PAGE BODY
-    ══════════════════════════════════════ }}
-    <div style="flex:1;width:100%;max-width:1280px;margin:0 auto;padding:1.5rem 1.25rem 2rem">
+    {{! ══════════════════
+        BODY
+    ══════════════════ }}
+    <div style="flex:1;width:100%;max-width:1280px;margin:0 auto;padding:1.5rem 1.25rem 2.5rem">
 
-        {{! ── Top bar: breadcrumb + page tools ── }}
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem">
-            <nav aria-label="breadcrumb" style="font-size:0.8rem">
+        {{! Top bar: breadcrumb + page tools }}
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    flex-wrap:wrap;gap:0.5rem;margin-bottom:1.25rem">
+            <nav aria-label="breadcrumb">
                 {{{ output.navbar }}}
             </nav>
-
-            {{! Focus mode toggle }}
             <button class="cm-focus-btn" id="cm-focus-toggle"
-                    title="Focus mode — hides sidebars for distraction-free reading"
-                    aria-label="Toggle focus mode"
-                    aria-pressed="false">
-                <svg style="width:14px;height:14px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    title="Focus mode — hides sidebars (shortcut: F)"
+                    aria-label="Toggle focus mode" aria-pressed="false">
+                <svg style="width:13px;height:13px;flex-shrink:0" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M15 3h6m0 0v6m0-6l-7 7M9 21H3m0 0v-6m0 6l7-7"/>
                 </svg>
@@ -131,27 +147,26 @@
             </button>
         </div>
 
-        {{! ── Activity / page header ── }}
+        {{! Activity / page header }}
         {{#headercontent}}
-            <div style="margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid var(--cm-border)">
+            <div style="margin-bottom:1.75rem;padding-bottom:1.25rem;
+                        border-bottom:1.5px solid var(--cm-border)">
                 {{> core/activity_header }}
             </div>
         {{/headercontent}}
 
-        {{! ── Two-column grid: main (3fr) + sidebar (1fr) ── }}
-        <div style="display:grid;grid-template-columns:1fr;gap:1.5rem"
-             class="cm-page-grid">
+        {{! Two-column content grid }}
+        <div class="cm-page-grid">
 
-            {{! ── Main content ── }}
+            {{! ── Main (3fr) ── }}
             <main id="cm-main" role="main">
                 {{{ output.main_content }}}
                 {{{ output.activity_navigation }}}
             </main>
 
-            {{! ── Sidebar ── }}
+            {{! ── Sidebar (1fr) ── }}
             {{#hasblocks}}
-                <aside id="cm-sidebar" aria-label="Sidebar blocks"
-                       style="display:flex;flex-direction:column;gap:1rem">
+                <aside id="cm-sidebar" aria-label="Sidebar">
                     {{{ sidepreblocks }}}
                 </aside>
             {{/hasblocks}}
@@ -159,9 +174,9 @@
         </div>
     </div>
 
-    {{! ══════════════════════════════════════
+    {{! ══════════════════
         FOOTER
-    ══════════════════════════════════════ }}
+    ══════════════════ }}
     <footer id="cm-footer" style="padding:1.25rem 0">
         <div style="max-width:1280px;margin:0 auto;padding:0 1.25rem;
                     display:flex;flex-wrap:wrap;justify-content:space-between;
@@ -179,71 +194,71 @@
 {{{ output.standard_after_main_region_html }}}
 {{{ output.standard_end_of_body_html }}}
 
-<style>
-    /* Responsive grid — sidebar becomes bottom column on mobile */
-    @media (min-width: 1024px) {
-        .cm-page-grid { grid-template-columns: 1fr 300px !important; }
-    }
-    @media (max-width: 1023px) {
-        #cm-sidebar { display: none; } /* collapse sidebar on small screens */
-    }
-</style>
-
 <script>
 (function () {
     'use strict';
 
-    /* ── 1. Theme toggle ─────────────────────────────────────── */
+    /* 1 — Theme toggle */
     var themeBtn = document.getElementById('cm-theme-toggle');
     if (themeBtn) {
         themeBtn.addEventListener('click', function () {
-            var isDark = document.documentElement.classList.toggle('dark');
-            try { localStorage.setItem('cm-theme', isDark ? 'dark' : 'light'); } catch(e){}
-            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            var dark = document.documentElement.classList.toggle('dark');
+            try { localStorage.setItem('cm-theme', dark ? 'dark' : 'light'); } catch(e){}
+            document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
         });
     }
 
-    /* ── 2. Focus mode toggle ────────────────────────────────── */
+    /* 2 — Focus mode */
     var focusBtn   = document.getElementById('cm-focus-toggle');
     var focusLabel = document.getElementById('cm-focus-label');
-    function applyFocus(on) {
+    function setFocus(on) {
         document.body.classList.toggle('cm-focus-mode', on);
         if (focusBtn)   focusBtn.setAttribute('aria-pressed', String(on));
         if (focusLabel) focusLabel.textContent = on ? 'Exit Focus' : 'Focus';
         try { localStorage.setItem('cm-focus', on ? '1' : '0'); } catch(e){}
     }
-    /* restore from storage */
-    try { if (localStorage.getItem('cm-focus') === '1') applyFocus(true); } catch(e){}
-    if (focusBtn) {
-        focusBtn.addEventListener('click', function () {
-            applyFocus(!document.body.classList.contains('cm-focus-mode'));
-        });
-    }
+    try { if (localStorage.getItem('cm-focus') === '1') setFocus(true); } catch(e){}
+    if (focusBtn) focusBtn.addEventListener('click', function () {
+        setFocus(!document.body.classList.contains('cm-focus-mode'));
+    });
 
-    /* ── 3. Reading progress bar ─────────────────────────────── */
+    /* 3 — Reading progress bar */
     var bar = document.getElementById('cm-read-progress');
     if (bar) {
-        function updateProgress() {
-            var scrolled = window.scrollY || document.documentElement.scrollTop;
-            var total    = document.documentElement.scrollHeight - window.innerHeight;
-            var pct      = total > 0 ? Math.min(100, (scrolled / total) * 100) : 0;
-            bar.style.width = pct + '%';
+        function tick() {
+            var s = window.scrollY || document.documentElement.scrollTop;
+            var h = document.documentElement.scrollHeight - window.innerHeight;
+            bar.style.width = (h > 0 ? Math.min(100, (s/h)*100) : 0) + '%';
         }
-        window.addEventListener('scroll', updateProgress, { passive: true });
-        updateProgress();
+        window.addEventListener('scroll', tick, { passive: true });
+        tick();
     }
 
-    /* ── 4. Keyboard shortcut: F = toggle focus, D = toggle dark ─ */
+    /* 4 — Keyboard shortcuts: F = focus, D = dark */
     document.addEventListener('keydown', function (e) {
-        /* Ignore when typing in inputs */
         if (['INPUT','TEXTAREA','SELECT'].indexOf(document.activeElement.tagName) !== -1) return;
-        if (e.key === 'f' || e.key === 'F') {
-            applyFocus(!document.body.classList.contains('cm-focus-mode'));
-        }
-        if (e.key === 'd' || e.key === 'D') {
-            if (themeBtn) themeBtn.click();
-        }
+        if (e.key === 'f' || e.key === 'F') setFocus(!document.body.classList.contains('cm-focus-mode'));
+        if ((e.key === 'd' || e.key === 'D') && themeBtn) themeBtn.click();
     });
+
+    /* 5 — Intersection Observer: animate elements as they scroll into view */
+    if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                    io.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.08 });
+        document.querySelectorAll('.card, .activity, .coursebox, .que, .forumpost, .block').forEach(function(el) {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(14px)';
+            el.style.transition = 'opacity 0.4s cubic-bezier(0.22,1,0.36,1), transform 0.4s cubic-bezier(0.22,1,0.36,1)';
+            io.observe(el);
+        });
+    }
 
 })();
 </script>

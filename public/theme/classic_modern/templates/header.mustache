@@ -1,8 +1,7 @@
 {{!
     @template theme_classic_modern/header
 
-    Sticky header for Classic Modern theme.
-    Includes: site logo/name, user menu, language menu, dark/light toggle.
+    Cobalt Professional Header — glassmorphism, animated brand, blue gradient system.
 
     Context variables:
     * sitename  – Site short name
@@ -11,30 +10,36 @@
     * langmenu  – Language menu export
     * config    – Moodle config (wwwroot etc.)
 }}
-<div style="width:100%;max-width:1280px;margin:0 auto;
-            padding:0 1.25rem;
+<div style="width:100%;max-width:1280px;margin:0 auto;padding:0 1.25rem;
             display:flex;align-items:center;justify-content:space-between;
-            height:60px;gap:1rem">
+            height:64px;gap:1rem">
 
-    {{! ── Brand / Logo ── }}
-    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+    {{! ── Brand ── }}
+    <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
         <a href="{{{ config.wwwroot }}}" class="site-name"
-           style="display:flex;align-items:center;gap:8px;text-decoration:none"
-           title="Home">
+           style="display:flex;align-items:center;gap:10px;text-decoration:none"
+           title="Home — {{sitename}}">
 
             {{#output.get_compact_logo_url}}
                 <img src="{{{ output.get_compact_logo_url }}}"
                      alt="{{{ sitename }}}"
-                     style="height:32px;width:auto;object-fit:contain">
+                     style="height:34px;width:auto;object-fit:contain;
+                            filter:drop-shadow(0 2px 6px rgba(59,130,246,0.3))">
             {{/output.get_compact_logo_url}}
 
             {{^output.get_compact_logo_url}}
-                {{! Default logo mark — amber rounded square with cross ──── }}
-                <span style="display:flex;align-items:center;justify-content:center;
-                             width:32px;height:32px;border-radius:8px;flex-shrink:0;
-                             background:linear-gradient(135deg,#d97706,#f59e0b)">
-                    <svg style="width:16px;height:16px" viewBox="0 0 24 24" fill="none">
-                        <path d="M7 12h10M12 7v10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+                {{! Animated gradient logo mark }}
+                <span style="width:36px;height:36px;border-radius:10px;flex-shrink:0;
+                             display:flex;align-items:center;justify-content:center;
+                             background:linear-gradient(135deg,#2563eb,#6366f1);
+                             box-shadow:0 4px 14px rgba(59,130,246,0.4);
+                             transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),
+                                        box-shadow 0.3s ease"
+                      onmouseover="this.style.transform='scale(1.1) rotate(-5deg)';this.style.boxShadow='0 6px 20px rgba(59,130,246,0.55)'"
+                      onmouseout="this.style.transform='scale(1) rotate(0)';this.style.boxShadow='0 4px 14px rgba(59,130,246,0.4)'">
+                    <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 3L4 9v12h16V9L12 3z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M9 21v-8h6v8" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
                     </svg>
                 </span>
                 <span class="site-name">{{sitename}}</span>
@@ -42,35 +47,37 @@
         </a>
     </div>
 
-    {{! ── Keyboard shortcut hint (hidden on mobile, subtle reminder) ── }}
-    <div style="flex:1;display:flex;align-items:center;justify-content:center">
-        <span style="font-size:0.7rem;color:var(--cm-muted);display:none"
-              class="cm-kbd-hint">
-            Press <kbd style="font-family:monospace;padding:1px 5px;border-radius:3px;
-                              border:1px solid var(--cm-border);font-size:0.7rem">F</kbd>
-            for focus mode &nbsp;·&nbsp;
-            <kbd style="font-family:monospace;padding:1px 5px;border-radius:3px;
-                        border:1px solid var(--cm-border);font-size:0.7rem">D</kbd>
-            for dark mode
+    {{! ── Keyboard shortcut hint (desktop only) ── }}
+    <div class="cm-kbd-hint"
+         style="flex:1;display:none;align-items:center;justify-content:center">
+        <span style="font-size:0.7rem;color:var(--cm-muted);display:flex;align-items:center;gap:0.5rem">
+            <kbd style="font-family:monospace;padding:1px 6px;border-radius:4px;
+                        border:1px solid var(--cm-border);font-size:0.68rem;
+                        background:var(--cm-surface-hi)">F</kbd>
+            focus &nbsp;·&nbsp;
+            <kbd style="font-family:monospace;padding:1px 6px;border-radius:4px;
+                        border:1px solid var(--cm-border);font-size:0.68rem;
+                        background:var(--cm-surface-hi)">D</kbd>
+            dark mode
         </span>
     </div>
 
-    {{! ── Right actions ── }}
+    {{! ── Right: controls ── }}
     <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
 
         {{! Dark / Light toggle }}
         <button id="cm-theme-toggle"
-                title="Toggle dark/light mode (keyboard: D)"
+                title="Toggle dark / light mode  (D)"
                 aria-label="Toggle dark/light mode">
-            {{! Moon — shown in light mode }}
-            <svg class="icon-light" style="width:15px;height:15px;flex-shrink:0" fill="none"
-                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            {{! Moon — light mode }}
+            <svg class="icon-light" style="width:15px;height:15px;flex-shrink:0"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round"
                       d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
             </svg>
-            {{! Sun — shown in dark mode }}
-            <svg class="icon-dark" style="width:15px;height:15px;flex-shrink:0" fill="none"
-                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            {{! Sun — dark mode }}
+            <svg class="icon-dark" style="width:15px;height:15px;flex-shrink:0"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"/>
                 <path stroke-linecap="round" stroke-linejoin="round"
                       d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42
@@ -94,8 +101,5 @@
 </div>
 
 <style>
-    /* Show keyboard hint on desktop */
-    @media (min-width: 1024px) {
-        .cm-kbd-hint { display: inline !important; }
-    }
+    @media (min-width: 1024px) { .cm-kbd-hint { display: flex !important; } }
 </style>

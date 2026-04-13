@@ -46,6 +46,7 @@ define('AALE_COIN_TYPE_ADMIN_ADD',        'admin_add');
 define('AALE_COIN_TYPE_ADMIN_DEDUCT',     'admin_deduct');
 
 define('AALE_SESSION_LABELS', ['FN1', 'FN2', 'AN1', 'AN2']);
+define('AALE_OUTCOME_FREEZE_MINS', 30);
 
 // ── Window helpers ────────────────────────────────────────────────────────────
 
@@ -447,13 +448,21 @@ function aale_get_all_attendance(int $bookingid): array {
 /**
  * Mark attendance for a session.
  *
- * @param  int  $bookingid
+ * @param  int  $slotid
+ * @param  int  $userid
  * @param  int  $session_number  1–16
- * @param  bool $present
+ * @param  string $status        present|absent
  * @return bool  false if already frozen
  */
-function aale_mark_attendance(int $bookingid, int $session_number, bool $present): bool {
+function aale_mark_attendance(int $slotid, int $userid, int $session_number, string $status): bool {
     global $DB, $USER;
+
+    $booking = $DB->get_record('aale_bookings', ['slotid' => $slotid, 'userid' => $userid], '*', IGNORE_MISSING);
+    if (!$booking) {
+        return false;
+    }
+
+    $bookingid = $booking->id;
 
     // Check if session is frozen for this booking.
     $existing = aale_get_attendance($bookingid, $session_number);
@@ -468,7 +477,7 @@ function aale_mark_attendance(int $bookingid, int $session_number, bool $present
         'bookingid'      => $bookingid,
         'session_number' => $session_number,
         'session_label'  => $label,
-        'present'        => $present ? 1 : 0,
+        'present'        => ($status === 'present') ? 1 : 0,
         'frozen'         => 0,
         'markedby'       => $USER->id,
         'timemodified'   => time(),
@@ -482,6 +491,23 @@ function aale_mark_attendance(int $bookingid, int $session_number, bool $present
         $DB->insert_record('aale_attendance', $data);
         return true;
     }
+}
+
+/**
+ * Check if a specific session is frozen for a slot.
+ * Returns true if ANY student's session is frozen (indicating the session is closed).
+ *
+ * @param int $slotid
+ * @param int $session_number
+ * @return bool
+ */
+function aale_is_session_frozen(int $slotid, int $session_number): bool {
+    global $DB;
+    $sql = "SELECT COUNT(a.id)
+              FROM {aale_attendance} a
+              JOIN {aale_bookings} b ON b.id = a.bookingid
+             WHERE b.slotid = ? AND a.session_number = ? AND a.frozen = 1";
+    return $DB->count_records_sql($sql, [$slotid, $session_number]) > 0;
 }
 
 /**
@@ -756,6 +782,16 @@ function aale_add_coin_transaction(int $aaleid, int $userid, int $amount, string
 }
 
 /**
+ * Get all teachers enrolled in a course.
+ *
+ * @param int $courseid
+ * @return array Array of user records
+ */
+function aale_get_enrolled_teachers(int $courseid): array {
+    $context = context_course::instance($courseid);
+    return get_enrolled_users($context, 'moodle/course:update'); // Usually teachers have this cap
+}
+/**
  * Award coins to a student when an outcome is frozen as 'cleared'.
  *
  * @param  int $bookingid
@@ -789,9 +825,9 @@ function aale_award_coins_for_outcome(int $bookingid): bool {
         get_string('coins_earned_cleared', 'mod_aale', (object)['level' => $level, 'amount' => $amount]),
         $bookingid
     );
-
     return true;
 }
+
 
 /**
  * Redeem coins (convert to internal marks or privileges).
@@ -1335,12 +1371,11 @@ function aale_render_faculty_dashboard($cm, $aale, $context) {
 
     $html = '';
 
-    // Get assigned slots for today and upcoming.
-    $today = date('Y-m-d');
+    // Get assigned slots for upcoming.
     $slots = $DB->get_records_select('aale_slots',
-        'aaleid = ? AND facid = ? AND slotdate >= ?',
-        [$aale->id, $USER->id, $today],
-        'slotdate ASC, slotstart ASC',
+        'windowid IN (SELECT id FROM {aale_windows} WHERE aaleid = ?) AND teacherid = ? AND classdate >= ?',
+        [$aale->id, $USER->id, time() - 86400],
+        'classdate ASC, timestart ASC',
         '*',
         0,
         10);
@@ -1358,8 +1393,8 @@ function aale_render_faculty_dashboard($cm, $aale, $context) {
         $html .= '<ul class="list-group">';
         foreach ($slots as $slot) {
             $html .= '<li class="list-group-item">';
-            $html .= '<strong>' . userdate($slot->slotdate, '%A, %d %B %Y') . '</strong> ';
-            $html .= 'at ' . date('H:i', strtotime($slot->slotstart)) . ' - ' . date('H:i', strtotime($slot->slotend));
+            $html .= '<strong>' . userdate($slot->classdate, '%A, %d %B %Y') . '</strong> ';
+            $html .= ' (' . $slot->slotmode . ') - Room: ' . $slot->venue;
             $html .= '</li>';
         }
         $html .= '</ul>';
@@ -1369,32 +1404,39 @@ function aale_render_faculty_dashboard($cm, $aale, $context) {
     $html .= '</div>';
 
     // Tabbed navigation.
-    $html .= '<div class="nav-tabs-wrapper">';
+    $html .= '<div class="nav-tabs-wrapper mt-4">';
     $html .= '<ul class="nav nav-tabs" role="tablist">';
-    $html .= '<li role="presentation" class="active"><a href="#myslots" aria-controls="myslots" role="tab" data-toggle="tab">' . get_string('myslots', 'mod_aale') . '</a></li>';
-    $html .= '<li role="presentation"><a href="#attendance" aria-controls="attendance" role="tab" data-toggle="tab">' . get_string('attendance', 'mod_aale') . '</a></li>';
-    $html .= '<li role="presentation"><a href="#outcomes" aria-controls="outcomes" role="tab" data-toggle="tab">' . get_string('outcomes', 'mod_aale') . '</a></li>';
+    $html .= '<li role="presentation" class="active nav-item"><a href="#myslots" class="nav-link active" aria-controls="myslots" role="tab" data-toggle="tab">' . get_string('myslots', 'mod_aale') . '</a></li>';
     $html .= '</ul>';
     $html .= '</div>';
 
-    // Tab content.
-    $html .= '<div class="tab-content">';
-
-    // My Slots tab.
+    $html .= '<div class="tab-content card p-3">';
     $html .= '<div role="tabpanel" class="tab-pane active" id="myslots">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/faculty/my_slots.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('viewallmyslots', 'mod_aale') . '</a>';
+    
+    if (empty($slots)) {
+        $html .= '<p>' . get_string('noslots', 'mod_aale') . '</p>';
+    } else {
+        $table = new html_table();
+        $table->head = [get_string('date', 'mod_aale'), get_string('mode', 'mod_aale'), get_string('venue', 'mod_aale'), get_string('actions', 'mod_aale')];
+        foreach ($slots as $slot) {
+            $att_url = new moodle_url('/mod/aale/faculty/attendance.php', ['id' => $cm->id, 'slotid' => $slot->id]);
+            $out_url = new moodle_url('/mod/aale/faculty/outcomes.php', ['id' => $cm->id, 'slotid' => $slot->id]);
+            
+            $actions = html_writer::link($att_url, get_string('markattendance', 'mod_aale'), ['class' => 'btn btn-sm btn-primary mr-2']);
+            if ($slot->slotmode === AALE_SLOT_MODE_CPA) {
+                $actions .= html_writer::link($out_url, get_string('setoutcome', 'mod_aale'), ['class' => 'btn btn-sm btn-info']);
+            }
+            
+            $table->data[] = [
+                userdate($slot->classdate, '%d %b %Y'),
+                ucfirst($slot->slotmode),
+                $slot->venue,
+                $actions
+            ];
+        }
+        $html .= html_writer::table($table);
+    }
     $html .= '</div>';
-
-    // Attendance tab.
-    $html .= '<div role="tabpanel" class="tab-pane" id="attendance">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/faculty/attendance.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('markattendance', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
-    // Outcomes tab.
-    $html .= '<div role="tabpanel" class="tab-pane" id="outcomes">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/faculty/outcomes.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('recordoutcomes', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
     $html .= '</div>';
 
     return $html;
@@ -1414,82 +1456,55 @@ function aale_render_student_dashboard($cm, $aale, $context) {
     $html = '';
 
     // Get student's current bookings.
-    $bookings = $DB->get_records_select('aale_bookings',
-        'aaleid = ? AND userid = ? AND status = ?',
-        [$aale->id, $USER->id, AALE_BOOKING_STATUS_BOOKED],
-        'bookingtime DESC',
-        '*',
-        0,
-        5);
+    $bookings = aale_get_user_bookings($aale->id, $USER->id);
 
     // Get student's coin balance.
-    $coinrecord = $DB->get_record('aale_coins', ['aaleid' => $aale->id, 'userid' => $USER->id]);
-    $coinbalance = $coinrecord ? $coinrecord->balance : 0;
+    $coinbalance = aale_get_coin_balance($aale->id, $USER->id);
 
     // Count available open windows.
-    $windowcount = $DB->count_records_select('aale_windows',
-        'aaleid = ? AND status = ?', [$aale->id, AALE_WINDOW_STATUS_OPEN]);
+    $windows = aale_get_windows($aale->id, AALE_WINDOW_STATUS_OPEN);
+    $openwindowcount = 0;
+    foreach ($windows as $w) {
+        if (aale_window_is_bookable($w)) $openwindowcount++;
+    }
 
     // Summary section.
     $html .= '<div class="aale-student-summary">';
     $html .= '<h2>' . get_string('studentdashboard', 'mod_aale') . '</h2>';
     $html .= '<div class="row">';
-    $html .= '<div class="col-md-4"><div class="alert alert-info">';
-    $html .= '<strong>' . count($bookings) . '</strong> ' . get_string('currentbookings', 'mod_aale');
+    $html .= '<div class="col-md-4"><div class="alert alert-info shadow-sm">';
+    $html .= '<strong>' . count($bookings) . '</strong> ' . get_string('mybookings', 'mod_aale');
     $html .= '</div></div>';
-    $html .= '<div class="col-md-4"><div class="alert alert-success">';
-    $html .= '<strong>' . $coinbalance . '</strong> ' . get_string('mycoinbalance', 'mod_aale');
+    $html .= '<div class="col-md-4"><div class="alert alert-success shadow-sm">';
+    $html .= '<strong>' . $coinbalance . '</strong> ' . get_string('totalcoins', 'mod_aale');
     $html .= '</div></div>';
-    $html .= '<div class="col-md-4"><div class="alert alert-warning">';
-    $html .= '<strong>' . $windowcount . '</strong> ' . get_string('availablewindows', 'mod_aale');
+    $html .= '<div class="col-md-4"><div class="alert alert-warning shadow-sm">';
+    $html .= '<strong>' . $openwindowcount . '</strong> ' . get_string('status_open', 'mod_aale');
     $html .= '</div></div>';
+    $html .= '</div>';
+
+    $html .= '<div class="mt-4">';
+    $html .= html_writer::link(new moodle_url('/mod/aale/booking.php', ['id' => $cm->id]), 
+        get_string('bookslot', 'mod_aale'), ['class' => 'btn btn-primary btn-lg btn-block']);
     $html .= '</div>';
 
     if (!empty($bookings)) {
-        $html .= '<div class="my-bookings-preview">';
-        $html .= '<h3>' . get_string('myrecentbookings', 'mod_aale') . '</h3>';
-        $html .= '<ul class="list-group">';
+        $html .= '<div class="my-bookings-preview mt-4">';
+        $html .= '<h3>' . get_string('mybookings', 'mod_aale') . '</h3>';
+        $table = new html_table();
+        $table->head = [get_string('date', 'mod_aale'), get_string('teacher', 'mod_aale'), get_string('venue', 'mod_aale'), get_string('status', 'mod_aale')];
         foreach ($bookings as $booking) {
-            $slot = $DB->get_record('aale_slots', ['id' => $booking->slotid]);
-            if ($slot) {
-                $html .= '<li class="list-group-item">';
-                $html .= '<strong>' . userdate($slot->slotdate, '%d %B %Y') . '</strong> ';
-                $html .= 'at ' . date('H:i', strtotime($slot->slotstart));
-                $html .= '</li>';
-            }
+            $teacher = $DB->get_record('user', ['id' => $booking->teacherid]);
+            $table->data[] = [
+                userdate($booking->classdate, '%d %b %Y'),
+                fullname($teacher),
+                $booking->venue,
+                ucfirst($booking->status)
+            ];
         }
-        $html .= '</ul>';
+        $html .= html_writer::table($table);
         $html .= '</div>';
     }
-
-    $html .= '</div>';
-
-    // Tabbed navigation.
-    $html .= '<div class="nav-tabs-wrapper">';
-    $html .= '<ul class="nav nav-tabs" role="tablist">';
-    $html .= '<li role="presentation" class="active"><a href="#booking" aria-controls="booking" role="tab" data-toggle="tab">' . get_string('bookaslot', 'mod_aale') . '</a></li>';
-    $html .= '<li role="presentation"><a href="#mybookings" aria-controls="mybookings" role="tab" data-toggle="tab">' . get_string('mybookings', 'mod_aale') . '</a></li>';
-    $html .= '<li role="presentation"><a href="#mycoins" aria-controls="mycoins" role="tab" data-toggle="tab">' . get_string('mycoins', 'mod_aale') . '</a></li>';
-    $html .= '</ul>';
-    $html .= '</div>';
-
-    // Tab content.
-    $html .= '<div class="tab-content">';
-
-    // Book a slot tab.
-    $html .= '<div role="tabpanel" class="tab-pane active" id="booking">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/booking.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('bookaslot', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
-    // My Bookings tab.
-    $html .= '<div role="tabpanel" class="tab-pane" id="mybookings">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/my_bookings.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('viewmybookings', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
-    // My Coins tab.
-    $html .= '<div role="tabpanel" class="tab-pane" id="mycoins">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/my_coins.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('viewmycoins', 'mod_aale') . '</a>';
-    $html .= '</div>';
 
     $html .= '</div>';
 

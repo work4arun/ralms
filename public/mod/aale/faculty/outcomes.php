@@ -5,22 +5,6 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
-//
-// Moodle is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
-/**
- * Faculty CPA outcome setting page for AALE activity.
- *
- * @package    mod_aale
- * @copyright  2026 Your Institution
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
 
 require_once(__DIR__ . '/../../../config.php');
 require_once(__DIR__ . '/../locallib.php');
@@ -35,7 +19,7 @@ $aale = $DB->get_record('aale', array('id' => $cm->instance), '*', MUST_EXIST);
 require_login($course, true, $cm);
 require_capability('mod/aale:setoutcome', context_module::instance($cmid));
 
-$slot = $DB->get_record('aale_slot', array('id' => $slotid), '*', MUST_EXIST);
+$slot = $DB->get_record('aale_slots', array('id' => $slotid), '*', MUST_EXIST);
 
 $PAGE->set_url('/mod/aale/faculty/outcomes.php', array('id' => $cmid, 'slotid' => $slotid));
 $PAGE->set_title(get_string('outcomes', 'mod_aale'));
@@ -49,128 +33,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = optional_param('action', '', PARAM_ALPHA);
 
     if ($action === 'set_outcome') {
-        $userid = required_param('userid', PARAM_INT);
-        $outcome = required_param('outcome', PARAM_ALPHA);
+        $bookingid = required_param('bookingid', PARAM_INT);
+        $outcome = required_param('outcome', PARAM_ALPHAEXT); // e.g. try_again
 
-        if (in_array($outcome, array('cleared', 'try_again', 'malpractice', 'ignore'))) {
-            aale_set_outcome($slotid, $userid, $outcome);
-        }
+        aale_set_outcome($bookingid, $outcome, $USER->id);
     }
 }
 
 echo $OUTPUT->header();
 
-// Get outcome summary
-$summary = aale_slot_outcome_summary($slotid);
+// Display slot details
+$date_display = userdate($slot->classdate, get_string('strftimedate', 'langconfig'));
+echo $OUTPUT->box(
+    html_writer::div(get_string('date', 'mod_aale') . ': ' . $date_display) .
+    html_writer::div(get_string('venue', 'mod_aale') . ': ' . format_string($slot->venue)) .
+    html_writer::div(get_string('mode', 'mod_aale') . ': ' . format_string($slot->slotmode)),
+    'slotdetails mb-4'
+);
 
-$summary_html = html_writer::start_div('outcome-summary-bar');
-$summary_html .= html_writer::div(get_string('cleared', 'mod_aale') . ': ' . ($summary['cleared'] ?? 0), 'summary-item cleared');
-$summary_html .= html_writer::div(get_string('tryagain', 'mod_aale') . ': ' . ($summary['try_again'] ?? 0), 'summary-item tryagain');
-$summary_html .= html_writer::div(get_string('malpractice', 'mod_aale') . ': ' . ($summary['malpractice'] ?? 0), 'summary-item malpractice');
-$summary_html .= html_writer::div(get_string('ignore', 'mod_aale') . ': ' . ($summary['ignore'] ?? 0), 'summary-item ignore');
-$summary_html .= html_writer::div(get_string('pending', 'mod_aale') . ': ' . ($summary['pending'] ?? 0), 'summary-item pending');
-$summary_html .= html_writer::end_div();
+// Get booked students
+$bookings = aale_get_slot_bookings($slotid);
 
-echo $OUTPUT->box($summary_html);
-
-// Get enrolled students
-$context = context_module::instance($cmid);
-$students = get_enrolled_users($context, 'mod/aale:student');
-
-if (empty($students)) {
-    echo $OUTPUT->notification(get_string('nostudents', 'mod_aale'));
+if (empty($bookings)) {
+    echo $OUTPUT->notification(get_string('nobookings', 'mod_aale'), 'info');
 } else {
-    // Display roster table
     $table = new html_table();
     $table->head = array(
-        get_string('name', 'mod_aale'),
+        get_string('student', 'mod_aale'),
         get_string('track', 'mod_aale'),
         get_string('level', 'mod_aale'),
-        get_string('attendance', 'mod_aale'),
-        get_string('currentoutcome', 'mod_aale'),
-        get_string('timeremaining', 'mod_aale'),
+        get_string('outcome', 'mod_aale'),
+        get_string('status', 'mod_aale'),
         get_string('actions', 'mod_aale')
     );
-    $table->attributes = array('class' => 'table table-striped');
+    $table->attributes = array('class' => 'table table-hover');
 
-    foreach ($students as $student) {
-        $outcome_record = aale_get_outcome($slotid, $student->id);
-        $attendance = aale_get_attendance_status($slotid, $student->id);
-        $outcome = $outcome_record ? $outcome_record->outcome : null;
-        $is_frozen = $outcome_record ? (bool)$outcome_record->is_frozen : false;
-        $set_at = $outcome_record ? $outcome_record->set_at : null;
-
+    foreach ($bookings as $booking) {
+        $student = $DB->get_record('user', array('id' => $booking->userid));
+        $outcome_rec = aale_get_outcome($booking->id);
+        
         $row = new html_table_row();
-
-        // Background color based on outcome
-        if ($is_frozen) {
-            switch ($outcome) {
-                case 'cleared':
-                    $row->attributes = array('class' => 'outcome-cleared');
-                    break;
-                case 'try_again':
-                    $row->attributes = array('class' => 'outcome-try-again');
-                    break;
-                case 'malpractice':
-                    $row->attributes = array('class' => 'outcome-malpractice');
-                    break;
-                case 'ignore':
-                    $row->attributes = array('class' => 'outcome-ignore');
-                    break;
-                default:
-                    $row->attributes = array('class' => 'outcome-pending');
-            }
-            $row->attributes['class'] .= ' frozen-row';
-        }
-
         $row->cells = array(
-            new html_table_cell(fullname($student)),
-            new html_table_cell($student->profile['track'] ?? '-'),
-            new html_table_cell($student->profile['level'] ?? '-'),
-            new html_table_cell(ucfirst($attendance ?: 'Not marked')),
+            fullname($student),
+            $booking->track_selected ?: '-',
+            $booking->level_selected ?: '-',
         );
 
-        // Current outcome
-        $outcome_display = $outcome ? ucfirst(str_replace('_', ' ', $outcome)) : 'Pending';
+        $current_outcome = $outcome_rec ? $outcome_rec->outcome : null;
+        $is_frozen = $outcome_rec ? (bool)$outcome_rec->frozen : false;
+        
+        $outcome_label = $current_outcome ? get_string('outcome_' . $current_outcome, 'mod_aale') : '-';
+        $row->cells[] = html_writer::tag('span', $outcome_label, array('class' => 'badge ' . ($current_outcome === 'cleared' ? 'badge-success' : 'badge-secondary')));
+
         if ($is_frozen) {
-            $outcome_display .= ' ' . html_writer::tag('i', '', array('class' => 'fa fa-lock', 'title' => get_string('frozen', 'mod_aale')));
-        }
-        $row->cells[] = new html_table_cell($outcome_display);
+            $row->cells[] = html_writer::tag('span', 'Frozen', array('class' => 'badge badge-dark'));
+            $row->cells[] = '-';
+        } else {
+            // Check timer
+            $time_left = '';
+            if ($outcome_rec) {
+                $secs_left = $outcome_rec->freezeat - time();
+                if ($secs_left > 0) {
+                    $time_left = floor($secs_left / 60) . 'm ' . ($secs_left % 60) . 's left';
+                } else {
+                    $time_left = 'Freezing soon...';
+                }
+            }
+            $row->cells[] = $time_left;
 
-        // Time remaining
-        $time_remaining_html = '-';
-        if ($set_at && !$is_frozen) {
-            $time_remaining_html = html_writer::div('00:30:00', 'timer-display', array('data-set-at' => $set_at));
-        } else if ($is_frozen && $set_at) {
-            $frozen_time = userdate($set_at, get_string('strftimedatetime', 'langconfig'));
-            $time_remaining_html = $frozen_time;
-        }
-        $row->cells[] = new html_table_cell($time_remaining_html);
-
-        // Actions
-        $actions_html = '';
-        if (!$is_frozen) {
-            $form = html_writer::start_tag('form', array('method' => 'POST', 'class' => 'outcome-form'));
-            $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()));
-            $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'action', 'value' => 'set_outcome'));
-            $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'userid', 'value' => $student->id));
-
-            $select_options = array(
-                'cleared' => get_string('cleared', 'mod_aale'),
-                'try_again' => get_string('tryagain', 'mod_aale'),
-                'malpractice' => get_string('malpractice', 'mod_aale'),
-                'ignore' => get_string('ignore', 'mod_aale'),
+            $actions = html_writer::start_tag('form', array('method' => 'POST', 'class' => 'd-inline'));
+            $actions .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()));
+            $actions .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'action', 'value' => 'set_outcome'));
+            $actions .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'bookingid', 'value' => $booking->id));
+            
+            $options = array(
+                'cleared' => 'Cleared (1)',
+                'try_again' => 'Try Again',
+                'malpractice' => 'Malpractice',
+                'ignore' => 'Ignore'
             );
-            $form .= html_writer::select($select_options, 'outcome', $outcome, array('' => 'Select outcome...'));
-            $form .= ' ';
-            $form .= html_writer::tag('button', get_string('save', 'mod_aale'),
-                array('type' => 'submit', 'class' => 'btn btn-sm btn-primary')
-            );
-            $form .= html_writer::end_tag('form');
-            $actions_html = $form;
-        }
 
-        $row->cells[] = new html_table_cell($actions_html);
+            foreach ($options as $val => $text) {
+                $btn_class = ($current_outcome === $val) ? 'btn-primary' : 'btn-outline-primary';
+                $actions .= html_writer::tag('button', $text, array(
+                    'type' => 'submit', 
+                    'name' => 'outcome', 
+                    'value' => $val, 
+                    'class' => 'btn btn-sm mb-1 mr-1 ' . $btn_class
+                ));
+            }
+            
+            $actions .= html_writer::end_tag('form');
+            $row->cells[] = $actions;
+        }
 
         $table->data[] = $row;
     }
@@ -178,6 +133,5 @@ if (empty($students)) {
     echo html_writer::table($table);
 }
 
-$PAGE->requires->js_call_amd('mod_aale/outcomes', 'init', array(array('slotid' => $slotid, 'freezeSecs' => 1800)));
-
 echo $OUTPUT->footer();
+

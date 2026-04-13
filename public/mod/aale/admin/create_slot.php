@@ -76,9 +76,13 @@ class aale_slot_form extends moodleform {
         $mform->addElement('hidden', 'windowid', $windowid);
         $mform->setType('windowid', PARAM_INT);
 
-        // Teacher ID.
-        $mform->addElement('text', 'teacherid', get_string('teacherid', 'aale'));
-        $mform->setType('teacherid', PARAM_INT);
+        // Teacher selection (Dropdown of enrolled teachers)
+        $teachers = aale_get_enrolled_teachers($cm->course);
+        $teacheroptions = array();
+        foreach ($teachers as $t) {
+            $teacheroptions[$t->id] = fullname($t);
+        }
+        $mform->addElement('select', 'teacherid', get_string('teacher', 'aale'), $teacheroptions);
         $mform->addRule('teacherid', get_string('required', 'aale'), 'required', null, 'client');
 
         // Venue.
@@ -221,31 +225,39 @@ if ($slotid) {
 if ($form->is_cancelled()) {
     redirect(new moodle_url('/mod/aale/admin/slots.php', array('id' => $id, 'windowid' => $windowid)));
 } else if ($data = $form->get_data()) {
+
+    // Common preparation
+    $data->windowid = $windowid;
+
     // Process att_sessions if class mode.
-    if ($data->slotmode === 'class' && isset($data->att_sessions)) {
-        $data->att_sessions = !empty($data->att_sessions) ? implode(',', $data->att_sessions) : '';
+    if ($data->slotmode === 'class') {
+        $data->att_sessions = !empty($data->att_sessions) ? json_encode(array_values($data->att_sessions)) : '[]';
     } else {
-        $data->att_sessions = '';
+        $data->att_sessions = '[]';
     }
 
-    // Process available_levels if CPA mode.
-    if ($data->slotmode === 'cpa' && isset($data->available_levels)) {
-        $data->available_levels = !empty($data->available_levels) ? implode(',', $data->available_levels) : '';
+    // Process CPA fields.
+    if ($data->slotmode === 'cpa') {
+        $data->available_levels = !empty($data->available_levels) ? json_encode(array_values($data->available_levels)) : '[]';
+        
+        // Basic validation for coins JSON
+        $coins = json_decode($data->coins_per_level);
+        if ($coins === null) {
+             // Fallback to empty if invalid JSON
+             $data->coins_per_level = '{}';
+        }
     } else {
-        $data->available_levels = '';
+        $data->available_levels = '[]';
+        $data->coins_per_level = '{}';
     }
 
     if ($slotid) {
-        // Update existing slot.
         $data->id = $slotid;
-        $data->cmid = $cm->id;
-        aale_update_slot($data);
+        aale_update_slot($slotid, $data);
         redirect(new moodle_url('/mod/aale/admin/slots.php', array('id' => $id, 'windowid' => $windowid)),
                  get_string('slotupdated', 'aale'), \core\output\notification::NOTIFY_SUCCESS);
     } else {
-        // Create new slot.
-        $data->cmid = $cm->id;
-        aale_create_slot($data);
+        aale_create_slot($windowid, $data);
         redirect(new moodle_url('/mod/aale/admin/slots.php', array('id' => $id, 'windowid' => $windowid)),
                  get_string('slotcreated', 'aale'), \core\output\notification::NOTIFY_SUCCESS);
     }

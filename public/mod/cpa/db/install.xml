@@ -162,7 +162,7 @@
         <FIELD NAME="attemptid"       TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
         <FIELD NAME="questionid"      TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
         <FIELD NAME="answertext"      TYPE="text"               NOTNULL="false" COMMENT="Short/fill-in answers"/>
-        <FIELD NAME="answercode"      TYPE="longtext"           NOTNULL="false" COMMENT="Submitted code"/>
+        <FIELD NAME="answercode"      TYPE="text"               NOTNULL="false" COMMENT="Submitted code"/>
         <FIELD NAME="codelanguage"    TYPE="char"   LENGTH="32" NOTNULL="true"  DEFAULT=""/>
         <FIELD NAME="selectedoptions" TYPE="text"               NOTNULL="false" COMMENT="JSON array of selected option IDs"/>
         <FIELD NAME="executionresult" TYPE="text"               NOTNULL="false" COMMENT="JSON with stdout, stderr, passed_tests"/>

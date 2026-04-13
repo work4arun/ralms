@@ -28,8 +28,16 @@ $primary    = new core\navigation\output\primary($PAGE);
 $renderer   = $PAGE->get_renderer('core');
 $primarymenu = $primary->export_for_template($renderer);
 
+$logourl = $OUTPUT->get_logo_url();
+if (method_exists($OUTPUT, 'get_login_logo_url')) {
+    $logourl = $OUTPUT->get_login_logo_url() ?: $logourl;
+} else if ($PAGE->theme->get_logo_url()) {
+    $logourl = $PAGE->theme->get_logo_url();
+}
+
 $templatecontext = [
-    'sitename'       => format_string($SITE->shortname, true, ['context' => context_system::instance(), 'escape' => false]),
+    'sitename'       => 'R-ACTIVE', // User specifically requested this name
+    'logourl'        => $logourl,
     'output'         => $OUTPUT,
     'bodyattributes' => $OUTPUT->body_attributes(),
     'langmenu'       => $primarymenu['lang'],

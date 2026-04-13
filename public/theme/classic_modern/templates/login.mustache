@@ -1,6 +1,8 @@
 {{!
-    Theme Classic Modern – login page.
-    Claude-inspired dark grid, glass card, amber accents.
+    Theme Classic Modern — login page.
+    Professional split-panel design:
+      Left  — branding, feature highlights, motivational copy
+      Right — login form card
     Dark by default, toggleable to light.
 }}
 <!DOCTYPE html>
@@ -12,14 +14,12 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&display=swap">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = { darkMode: 'class' }
-    </script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
 
-    {{! Apply dark class BEFORE render (prevents flash) }}
+    {{! Anti-FOUC }}
     <script>
         (function () {
             try {
@@ -38,26 +38,30 @@
     <style>
         /* ── Variables ── */
         :root {
-            --cm-bg:         #f5f5f5;
-            --cm-surface:    #ffffff;
-            --cm-surface-hi: #f0f0f0;
-            --cm-border:     rgba(0,0,0,0.10);
-            --cm-text:       #1a1a1a;
-            --cm-muted:      #6b7280;
-            --cm-accent:     #d97706;
-            --cm-link:       #2563eb;
-            --cm-dot:        rgba(0,0,0,0.07);
+            --cm-bg:           #f6f6f4;
+            --cm-surface:      #ffffff;
+            --cm-surface-hi:   #f0efec;
+            --cm-border:       rgba(0,0,0,0.09);
+            --cm-border-strong:rgba(0,0,0,0.18);
+            --cm-text:         #1a1a1a;
+            --cm-text-sub:     #4b5563;
+            --cm-muted:        #6b7280;
+            --cm-accent:       #d97706;
+            --cm-accent-dark:  #b45309;
+            --cm-link:         #1d4ed8;
+            --cm-dot:          rgba(0,0,0,0.055);
         }
         html.dark {
-            --cm-bg:         #131313;
-            --cm-surface:    #1e1e1e;
-            --cm-surface-hi: #252525;
-            --cm-border:     rgba(255,255,255,0.08);
-            --cm-text:       #e2e8f0;
-            --cm-muted:      #94a3b8;
-            --cm-accent:     #d97706;
-            --cm-link:       #93c5fd;
-            --cm-dot:        rgba(255,255,255,0.055);
+            --cm-bg:           #111111;
+            --cm-surface:      #1a1a1a;
+            --cm-surface-hi:   #222222;
+            --cm-border:       rgba(255,255,255,0.08);
+            --cm-border-strong:rgba(255,255,255,0.18);
+            --cm-text:         #e8e6e1;
+            --cm-text-sub:     #a8a29e;
+            --cm-muted:        #78716c;
+            --cm-link:         #93c5fd;
+            --cm-dot:          rgba(255,255,255,0.04);
         }
 
         /* ── Base ── */
@@ -71,33 +75,42 @@
             background-attachment: fixed;
             min-height: 100vh;
             transition: background-color 0.2s, color 0.2s;
+            -webkit-font-smoothing: antialiased;
         }
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Poppins', sans-serif;
-            color: var(--cm-text);
-        }
-        a             { color: var(--cm-link); }
-        a:hover       { opacity: 0.8; }
-        p, span, label, div { color: var(--cm-text); }
+        h1, h2, h3, h4 { font-family: 'Poppins', sans-serif; color: var(--cm-text); }
+        a { color: var(--cm-link); text-decoration: none; }
+        a:hover { opacity: 0.85; text-decoration: underline; }
+        p, span, label, li { color: var(--cm-text); }
 
-        /* ── Form overrides (Moodle injects Bootstrap forms) ── */
-        input, input[type="text"], input[type="email"],
+        /* ── Moodle form overrides ── */
+        input[type="text"], input[type="email"],
         input[type="password"], input[type="search"],
         select, textarea, .form-control {
             background-color: var(--cm-surface-hi) !important;
             color: var(--cm-text) !important;
             border: 1px solid var(--cm-border) !important;
             border-radius: 8px !important;
-            padding: 0.6rem 0.85rem !important;
+            padding: 0.65rem 0.9rem !important;
+            font-size: 0.9rem !important;
+            width: 100%;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
         input:focus, .form-control:focus {
             border-color: var(--cm-accent) !important;
-            box-shadow: 0 0 0 3px rgba(217,119,6,0.22) !important;
+            box-shadow: 0 0 0 3px rgba(217,119,6,0.2) !important;
             outline: none !important;
+            background-color: var(--cm-surface) !important;
         }
         input::placeholder { color: var(--cm-muted) !important; }
-        label, .col-form-label { color: var(--cm-text) !important; font-weight: 500; }
-        .form-text, .help-block { color: var(--cm-muted) !important; font-size: 0.82rem; }
+        label, .col-form-label {
+            color: var(--cm-text) !important;
+            font-weight: 500 !important;
+            font-size: 0.85rem !important;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+        .form-text, .help-block { color: var(--cm-muted) !important; font-size: 0.78rem; margin-top: 0.25rem; }
+        .form-group { margin-bottom: 1.1rem; }
 
         .btn-primary, input[type="submit"], button[type="submit"] {
             background-color: var(--cm-accent) !important;
@@ -105,90 +118,171 @@
             color: #fff !important;
             font-weight: 600 !important;
             border-radius: 8px !important;
-            padding: 0.55rem 1.25rem !important;
-            transition: background-color 0.15s !important;
+            padding: 0.65rem 1.5rem !important;
+            font-size: 0.9rem !important;
+            width: 100%;
+            cursor: pointer;
+            transition: background-color 0.15s, box-shadow 0.15s;
+            box-shadow: 0 2px 8px rgba(217,119,6,0.3);
+            border: none !important;
         }
         .btn-primary:hover, input[type="submit"]:hover, button[type="submit"]:hover {
-            background-color: #b45309 !important;
-            border-color: #b45309 !important;
+            background-color: var(--cm-accent-dark) !important;
+            box-shadow: 0 4px 12px rgba(217,119,6,0.4) !important;
+            transform: translateY(-1px);
         }
         .btn-secondary {
             background-color: var(--cm-surface-hi) !important;
-            border-color: var(--cm-border) !important;
+            border: 1px solid var(--cm-border-strong) !important;
             color: var(--cm-text) !important;
             border-radius: 8px !important;
         }
-
         .alert {
             background-color: var(--cm-surface-hi) !important;
             color: var(--cm-text) !important;
             border: 1px solid var(--cm-border) !important;
             border-radius: 8px !important;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
         }
-        .alert-danger  { border-left: 4px solid #f87171 !important; }
-        .alert-success { border-left: 4px solid #4ade80 !important; }
+        .alert-danger  { border-left: 4px solid #f87171 !important; background: rgba(248,113,113,0.06) !important; }
+        .alert-success { border-left: 4px solid #4ade80 !important; background: rgba(74,222,128,0.06) !important; }
+        .alert-info    { border-left: 4px solid #38bdf8 !important; background: rgba(56,189,248,0.06) !important; }
 
-        /* ── Login card ── */
-        .cm-login-wrap {
+        /* ── Page layout ── */
+        .cm-login-page {
             min-height: 100vh;
             display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem 1rem;
-        }
-        .cm-login-card {
-            width: 100%;
-            max-width: 420px;
-            background-color: var(--cm-surface);
-            border: 1px solid var(--cm-border);
-            border-radius: 16px;
-            padding: 2.5rem 2rem;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.35);
-        }
-        html:not(.dark) .cm-login-card {
-            box-shadow: 0 4px 24px rgba(0,0,0,0.10);
-        }
-        .cm-logo-mark {
-            width: 48px;
-            height: 48px;
-            background: linear-gradient(135deg, #d97706, #f59e0b);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1.25rem;
         }
 
-        /* ── Toggle button ── */
+        /* Left brand panel */
+        .cm-brand-panel {
+            display: none; /* hidden on mobile */
+            flex: 1;
+            background: linear-gradient(160deg, #1a1200 0%, #2d1f00 50%, #1a1200 100%);
+            border-right: 1px solid rgba(217,119,6,0.15);
+            padding: 3rem;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        html:not(.dark) .cm-brand-panel {
+            background: linear-gradient(160deg, #fff9ed 0%, #fef3c7 50%, #fff9ed 100%);
+            border-right: 1px solid rgba(217,119,6,0.2);
+        }
+        .cm-brand-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(217,119,6,0.07) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+        @media (min-width: 900px) {
+            .cm-brand-panel { display: flex; }
+        }
+
+        /* Right form panel */
+        .cm-form-panel {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2.5rem 2rem;
+            background-color: var(--cm-surface);
+            min-height: 100vh;
+        }
+        @media (min-width: 900px) {
+            .cm-form-panel { width: 440px; flex-shrink: 0; }
+        }
+
+        /* Form card inner */
+        .cm-form-inner { width: 100%; max-width: 380px; }
+
+        /* Logo mark */
+        .cm-logo-mark {
+            width: 52px; height: 52px;
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 16px rgba(217,119,6,0.35);
+        }
+
+        /* Feature list */
+        .cm-feature {
+            display: flex;
+            gap: 0.875rem;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+        .cm-feature-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.1rem;
+        }
+        .cm-feature-text strong {
+            font-size: 0.9rem;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.15rem;
+        }
+        html.dark .cm-feature-text strong { color: #e8e6e1; }
+        html:not(.dark) .cm-feature-text strong { color: #1a1a1a; }
+        .cm-feature-text span {
+            font-size: 0.8rem;
+            color: var(--cm-muted);
+            line-height: 1.5;
+            display: block;
+        }
+
+        /* Divider with text */
+        .cm-divider {
+            display: flex; align-items: center; gap: 0.75rem;
+            margin: 1.25rem 0;
+        }
+        .cm-divider::before, .cm-divider::after {
+            content: ''; flex: 1;
+            border-top: 1px solid var(--cm-border);
+        }
+        .cm-divider span { color: var(--cm-muted); font-size: 0.75rem; white-space: nowrap; }
+
+        /* Theme toggle (fixed top-right) */
         #cm-theme-toggle {
             position: fixed;
-            top: 1rem;
-            right: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+            top: 1rem; right: 1rem;
+            display: flex; align-items: center; gap: 6px;
             padding: 6px 12px;
             border-radius: 8px;
             border: 1px solid var(--cm-border);
             background: var(--cm-surface);
             color: var(--cm-text);
-            font-size: 13px;
-            font-weight: 500;
+            font-size: 0.8rem; font-weight: 500;
             cursor: pointer;
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 200;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
         }
         #cm-theme-toggle:hover { border-color: var(--cm-accent); color: var(--cm-accent); }
         #cm-theme-toggle .icon-dark  { display: none; }
-        #cm-theme-toggle .icon-light { display: inline; }
-        html.dark #cm-theme-toggle .icon-dark  { display: inline; }
+        #cm-theme-toggle .icon-light { display: inline-flex; }
+        html.dark #cm-theme-toggle .icon-dark  { display: inline-flex; }
         html.dark #cm-theme-toggle .icon-light { display: none; }
 
-        /* scrollbar */
-        ::-webkit-scrollbar              { width: 8px; }
-        ::-webkit-scrollbar-track        { background: var(--cm-bg); }
-        ::-webkit-scrollbar-thumb        { background: var(--cm-border); border-radius: 4px; }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 7px; height: 7px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--cm-border-strong); border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--cm-accent); }
+
+        /* Focus ring */
+        :focus-visible { outline: 2px solid var(--cm-accent) !important; outline-offset: 2px; }
     </style>
 
     {{{ output.standard_top_of_body_html_head }}}
@@ -197,53 +291,143 @@
 <body {{{ bodyattributes }}}>
 {{{ output.standard_top_of_body_html }}}
 
-{{! ── Dark / Light toggle ── }}
-<button id="cm-theme-toggle" aria-label="Toggle theme">
-    <svg class="icon-light" style="width:15px;height:15px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
+{{! ── Dark / Light toggle (always visible, fixed) ── }}
+<button id="cm-theme-toggle" aria-label="Toggle dark/light mode">
+    <svg class="icon-light" style="width:14px;height:14px" fill="none" viewBox="0 0 24 24"
+         stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z"/>
     </svg>
-    <svg class="icon-dark" style="width:15px;height:15px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <svg class="icon-dark" style="width:14px;height:14px" fill="none" viewBox="0 0 24 24"
+         stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="5"/>
         <path stroke-linecap="round" stroke-linejoin="round"
-              d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+              d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42
+                 M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
     </svg>
-    <span class="icon-dark">Light</span>
-    <span class="icon-light">Dark</span>
+    <span class="icon-light" style="font-size:0.8rem">Dark</span>
+    <span class="icon-dark"  style="font-size:0.8rem;display:none">Light</span>
 </button>
 
-<div class="cm-login-wrap">
-    <div class="cm-login-card">
+<div class="cm-login-page">
 
-        {{! Logo mark }}
-        <div class="cm-logo-mark">
-            <svg style="width:24px;height:24px" viewBox="0 0 24 24" fill="none">
-                <path d="M7 12h10M12 7v10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-        </div>
+    {{! ══════════════════════════
+        LEFT — Brand / Features
+    ══════════════════════════ }}
+    <div class="cm-brand-panel">
 
-        {{! Heading }}
-        <div style="text-align:center;margin-bottom:1.75rem">
-            <h1 style="font-size:1.5rem;font-weight:700;margin:0 0 0.4rem;color:var(--cm-text)">
-                Sign in to {{sitename}}
-            </h1>
-            <p style="font-size:0.875rem;color:var(--cm-muted);margin:0">
-                Enter your credentials to continue
-            </p>
-        </div>
-
-        {{! Language menu }}
-        {{#langmenu}}
-            <div style="margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--cm-border)">
-                {{> core/action_menu}}
+        {{! Site wordmark }}
+        <div style="position:relative;z-index:1">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:3.5rem">
+                <div style="width:36px;height:36px;border-radius:9px;
+                            background:linear-gradient(135deg,#d97706,#f59e0b);
+                            display:flex;align-items:center;justify-content:center">
+                    <svg style="width:18px;height:18px" viewBox="0 0 24 24" fill="none">
+                        <path d="M7 12h10M12 7v10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:1.1rem;color:var(--cm-text)">
+                    {{sitename}}
+                </span>
             </div>
-        {{/langmenu}}
 
-        {{! Moodle injects the login form here }}
-        <div>
-            {{{ output.main_content }}}
+            <h1 style="font-size:1.85rem;font-weight:800;line-height:1.2;
+                       margin-bottom:0.75rem;color:var(--cm-text)">
+                Your learning,<br>focused and clear.
+            </h1>
+            <p style="font-size:0.9rem;color:var(--cm-muted);margin-bottom:3rem;line-height:1.65;max-width:340px">
+                Access courses, track your progress, submit assignments,
+                and collaborate — all in one thoughtful space.
+            </p>
+
+            {{! Feature highlights }}
+            <div class="cm-feature">
+                <div class="cm-feature-icon" style="background:rgba(217,119,6,0.15)">📚</div>
+                <div class="cm-feature-text">
+                    <strong>Course Library</strong>
+                    <span>All your enrolled courses, resources, and materials in one place.</span>
+                </div>
+            </div>
+            <div class="cm-feature">
+                <div class="cm-feature-icon" style="background:rgba(22,163,74,0.12)">✅</div>
+                <div class="cm-feature-text">
+                    <strong>Progress Tracking</strong>
+                    <span>See exactly where you are and what's next in your learning journey.</span>
+                </div>
+            </div>
+            <div class="cm-feature">
+                <div class="cm-feature-icon" style="background:rgba(56,189,248,0.12)">🤝</div>
+                <div class="cm-feature-text">
+                    <strong>Collaborate & Discuss</strong>
+                    <span>Forums, assignments, and group activities to learn with others.</span>
+                </div>
+            </div>
+            <div class="cm-feature">
+                <div class="cm-feature-icon" style="background:rgba(139,92,246,0.12)">🎯</div>
+                <div class="cm-feature-text">
+                    <strong>Focus Mode</strong>
+                    <span>Distraction-free reading view so you can concentrate on what matters.</span>
+                </div>
+            </div>
         </div>
 
+        {{! Footer note }}
+        <p style="position:relative;z-index:1;font-size:0.75rem;color:var(--cm-muted);margin:0">
+            Classic Modern Theme · Powered by Moodle
+        </p>
     </div>
+
+    {{! ══════════════════════════
+        RIGHT — Login Form
+    ══════════════════════════ }}
+    <div class="cm-form-panel">
+        <div class="cm-form-inner">
+
+            {{! Logo mark (visible on mobile where brand panel is hidden) }}
+            <div class="cm-logo-mark" style="display:block">
+                <svg style="width:26px;height:26px" viewBox="0 0 24 24" fill="none">
+                    <path d="M7 12h10M12 7v10" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <div style="margin-bottom:2rem">
+                <h1 style="font-size:1.5rem;font-weight:700;margin:0 0 0.35rem;
+                           color:var(--cm-text);line-height:1.2">
+                    Sign in
+                </h1>
+                <p style="font-size:0.875rem;color:var(--cm-muted);margin:0">
+                    Welcome back to {{sitename}}
+                </p>
+            </div>
+
+            {{! Language menu (if multi-language site) }}
+            {{#langmenu}}
+                <div style="margin-bottom:1.25rem;padding-bottom:1.25rem;
+                            border-bottom:1px solid var(--cm-border)">
+                    {{> core/action_menu}}
+                </div>
+            {{/langmenu}}
+
+            {{! Moodle login form }}
+            <div>
+                {{{ output.main_content }}}
+            </div>
+
+            <div class="cm-divider">
+                <span>Need an account?</span>
+            </div>
+
+            <p style="text-align:center;font-size:0.8rem;color:var(--cm-muted)">
+                Contact your site administrator or&nbsp;
+                <a href="{{{ config.wwwroot }}}/login/signup.php"
+                   style="color:var(--cm-accent);font-weight:600">
+                    create an account
+                </a>
+            </p>
+
+        </div>
+    </div>
+
 </div>
 
 {{{ output.standard_after_main_region_html }}}
@@ -252,7 +436,7 @@
 <script>
     document.getElementById('cm-theme-toggle').addEventListener('click', function () {
         var isDark = document.documentElement.classList.toggle('dark');
-        localStorage.setItem('cm-theme', isDark ? 'dark' : 'light');
+        try { localStorage.setItem('cm-theme', isDark ? 'dark' : 'light'); } catch(e){}
     });
 </script>
 

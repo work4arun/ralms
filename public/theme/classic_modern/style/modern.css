@@ -1,251 +1,1105 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   CLASSIC MODERN — LUMINOUS GLASS UI
-   A futuristic, high-contrast glassy design system for Moodle.
+   CLASSIC MODERN — Professional Learner-Focused Theme for Moodle
+   Design goals: readable, calm, distraction-free, progress-aware, accessible
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ── 0. GOOGLE FONTS ──────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-
+/* ── 1. DESIGN TOKENS ─────────────────────────────────────────────────────── */
 :root {
-    --primary: #4f46e5;
-    --primary-glow: rgba(79, 70, 229, 0.4);
-    --secondary: #0ea5e9;
-    --accent: #8b5cf6;
-    --glass-bg: rgba(255, 255, 255, 0.72);
-    --glass-border: rgba(255, 255, 255, 0.4);
-    --glass-edge: rgba(255, 255, 255, 0.8);
-    --text-main: #1e293b;
-    --text-dim: #64748b;
-    --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-    --radius-lg: 20px;
-    --radius-md: 12px;
+    /* Brand */
+    --cm-accent:       #d97706;   /* Amber – primary CTA */
+    --cm-accent-soft:  #fbbf24;
+    --cm-accent-dark:  #b45309;
+    --cm-success:      #16a34a;
+    --cm-danger:       #dc2626;
+    --cm-warning:      #ca8a04;
+    --cm-info:         #0284c7;
+
+    /* Light mode surfaces */
+    --cm-bg:           #f6f6f4;
+    --cm-surface:      #ffffff;
+    --cm-surface-hi:   #f0efec;
+    --cm-surface-lo:   #fafaf8;
+    --cm-border:       rgba(0,0,0,0.09);
+    --cm-border-strong:rgba(0,0,0,0.18);
+    --cm-text:         #1a1a1a;
+    --cm-text-sub:     #4b5563;
+    --cm-muted:        #6b7280;
+    --cm-link:         #1d4ed8;
+    --cm-link-hover:   #1e40af;
+    --cm-dot:          rgba(0,0,0,0.055);
+
+    /* Layout */
+    --cm-nav-h:        60px;
+    --cm-radius-sm:    6px;
+    --cm-radius:       10px;
+    --cm-radius-lg:    14px;
+    --cm-radius-xl:    20px;
+
+    /* Typography */
+    --cm-font-body:    'Inter', system-ui, -apple-system, sans-serif;
+    --cm-font-head:    'Poppins', 'Inter', system-ui, sans-serif;
+    --cm-font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+    --cm-line-content: 1.75;   /* generous reading line-height */
+
+    /* Shadows */
+    --cm-shadow-xs:    0 1px 2px rgba(0,0,0,0.06);
+    --cm-shadow-sm:    0 2px 6px rgba(0,0,0,0.07);
+    --cm-shadow:       0 4px 16px rgba(0,0,0,0.08);
+    --cm-shadow-lg:    0 12px 36px rgba(0,0,0,0.10);
+
+    /* Activity type accent colours */
+    --act-quiz:        #7c3aed;   /* violet */
+    --act-assign:      #0891b2;   /* cyan */
+    --act-forum:       #059669;   /* emerald */
+    --act-resource:    #ca8a04;   /* yellow */
+    --act-url:         #2563eb;   /* blue */
+    --act-scorm:       #db2777;   /* pink */
+    --act-page:        #64748b;   /* slate */
+    --act-book:        #b45309;   /* amber-dark */
+    --act-choice:      #7c3aed;
+    --act-feedback:    #0891b2;
+    --act-lesson:      #0f766e;   /* teal */
+    --act-wiki:        #6d28d9;
+    --act-workshop:    #be123c;   /* rose */
+    --act-label:       transparent;
+    --act-folder:      #854d0e;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   1. DYNAMIC MESH BACKGROUND
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* Dark mode tokens */
+html.dark {
+    --cm-bg:           #111111;
+    --cm-surface:      #1a1a1a;
+    --cm-surface-hi:   #222222;
+    --cm-surface-lo:   #151515;
+    --cm-border:       rgba(255,255,255,0.08);
+    --cm-border-strong:rgba(255,255,255,0.18);
+    --cm-text:         #e8e6e1;
+    --cm-text-sub:     #a8a29e;
+    --cm-muted:        #78716c;
+    --cm-link:         #93c5fd;
+    --cm-link-hover:   #bfdbfe;
+    --cm-dot:          rgba(255,255,255,0.04);
+    --cm-shadow-xs:    0 1px 2px rgba(0,0,0,0.3);
+    --cm-shadow-sm:    0 2px 6px rgba(0,0,0,0.35);
+    --cm-shadow:       0 4px 16px rgba(0,0,0,0.4);
+    --cm-shadow-lg:    0 12px 36px rgba(0,0,0,0.5);
+}
+
+/* ── 2. BASE / RESET ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
-    background-color: #f8fafc !important;
-    background-image: 
-        radial-gradient(circle at 0% 0%, rgba(79, 70, 229, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
-        radial-gradient(circle at 0% 100%, rgba(20, 184, 166, 0.08) 0%, transparent 40%) !important;
+    font-family: var(--cm-font-body) !important;
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+    background-color: var(--cm-bg) !important;
+    color: var(--cm-text) !important;
+    background-image: radial-gradient(circle, var(--cm-dot) 1px, transparent 1px) !important;
+    background-size: 28px 28px !important;
     background-attachment: fixed !important;
-    color: var(--text-main) !important;
     min-height: 100vh;
-    overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   2. TYPOGRAPHY
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* Focus mode — hides sidebars, widens content for deep reading */
+body.cm-focus-mode .drawer,
+body.cm-focus-mode [data-region="left-hand-drawer"],
+body.cm-focus-mode [data-region="right-hand-drawer"],
+body.cm-focus-mode #cm-sidebar,
+body.cm-focus-mode .block_settings,
+body.cm-focus-mode #nav-drawer {
+    display: none !important;
+}
+body.cm-focus-mode #region-main,
+body.cm-focus-mode #cm-main {
+    max-width: 800px;
+    margin: 0 auto;
+}
+body.cm-focus-mode .cm-focus-btn {
+    color: var(--cm-accent) !important;
+    background: rgba(217,119,6,0.1) !important;
+}
+
+/* ── 3. TYPOGRAPHY ────────────────────────────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
-    letter-spacing: -0.02em !important;
+    font-family: var(--cm-font-head) !important;
+    color: var(--cm-text) !important;
     font-weight: 700 !important;
-    color: #0f172a !important;
+    letter-spacing: -0.02em !important;
+    line-height: 1.25 !important;
+    margin-top: 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   3. GLASSMOPHISM UTILITIES
-   ═══════════════════════════════════════════════════════════════════════════ */
-.glass-panel {
-    background: var(--glass-bg) !important;
-    backdrop-filter: blur(12px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(12px) saturate(180%) !important;
-    border: 1px solid var(--glass-border) !important;
-    box-shadow: var(--card-shadow) !important;
+h1 { font-size: 1.875rem !important; }
+h2 { font-size: 1.5rem !important; }
+h3 { font-size: 1.25rem !important; }
+h4 { font-size: 1.1rem !important; }
+h5 { font-size: 1rem !important; font-weight: 600 !important; }
+
+p, li, td, th, label, span, div {
+    color: var(--cm-text) !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   4. NAVBAR — FROSTED FLOATING
-   ═══════════════════════════════════════════════════════════════════════════ */
-.navbar, nav.navbar.fixed-top {
-    background: rgba(255, 255, 255, 0.6) !important;
-    backdrop-filter: blur(20px) saturate(160%) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3) !important;
-    box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.04) !important;
-    padding: 0.75rem 2rem !important;
+a {
+    color: var(--cm-link) !important;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+a:hover {
+    color: var(--cm-link-hover) !important;
+    text-decoration: underline;
 }
 
-.navbar-brand {
-    font-family: 'Outfit', sans-serif !important;
-    font-weight: 800 !important;
-    font-size: 1.2rem !important;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+/* Content body – generous reading typography */
+#region-main p,
+#cm-main p,
+.cm-content-body p {
+    line-height: var(--cm-line-content) !important;
+    max-width: 72ch;
+    color: var(--cm-text-sub) !important;
+}
+
+#region-main ul,
+#region-main ol,
+#cm-main ul,
+#cm-main ol {
+    line-height: var(--cm-line-content) !important;
+    padding-left: 1.5rem;
+}
+
+code, pre, kbd, samp {
+    font-family: var(--cm-font-mono) !important;
+    font-size: 0.875em !important;
+}
+
+code {
+    background: var(--cm-surface-hi) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: 4px;
+    padding: 0.15em 0.45em;
+    color: var(--cm-accent) !important;
+}
+
+pre {
+    background: var(--cm-surface-hi) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius) !important;
+    padding: 1.25rem !important;
+    overflow-x: auto;
+}
+
+blockquote {
+    border-left: 3px solid var(--cm-accent) !important;
+    margin: 1.5rem 0;
+    padding: 0.75rem 1.25rem;
+    background: rgba(217,119,6,0.06) !important;
+    border-radius: 0 var(--cm-radius) var(--cm-radius) 0 !important;
+    color: var(--cm-text-sub) !important;
+    font-style: italic;
+}
+
+/* ── 4. LAYOUT CHROME ─────────────────────────────────────────────────────── */
+#page,
+#page-wrapper,
+.pagelayout-standard,
+.pagelayout-course,
+.pagelayout-admin,
+[id^="page-"] {
+    background: transparent !important;
+    color: var(--cm-text) !important;
+}
+
+/* Page header area */
+#page-header {
+    background: transparent !important;
+}
+
+/* ── 5. NAVIGATION BAR ────────────────────────────────────────────────────── */
+.navbar,
+#nav-bar,
+.navbar-light,
+.navbar-expand-lg,
+nav.navbar {
+    background-color: var(--cm-surface) !important;
+    border-bottom: 1px solid var(--cm-border) !important;
+    box-shadow: var(--cm-shadow-xs) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    min-height: var(--cm-nav-h) !important;
+}
+
+.navbar-brand,
+.navbar-brand span {
+    font-family: var(--cm-font-head) !important;
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    color: var(--cm-text) !important;
+}
+
+html.dark .navbar-brand {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
-.nav-link {
+.nav-link, .nav-item a {
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    color: var(--cm-text-sub) !important;
+    padding: 0.4rem 0.75rem !important;
+    border-radius: var(--cm-radius-sm) !important;
+    transition: all 0.15s ease !important;
+}
+.nav-link:hover, .nav-item a:hover {
+    color: var(--cm-accent) !important;
+    background: rgba(217,119,6,0.07) !important;
+    text-decoration: none !important;
+}
+.nav-link.active {
+    color: var(--cm-accent) !important;
     font-weight: 600 !important;
-    font-size: 0.9rem !important;
-    color: var(--text-dim) !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    margin: 0 4px;
-    padding: 0.5rem 1rem !important;
-    border-radius: 12px;
 }
 
-.nav-link:hover {
-    color: var(--primary) !important;
-    background: rgba(79, 70, 229, 0.05) !important;
+/* Breadcrumb */
+.breadcrumb {
+    background: transparent !important;
+    padding: 0.5rem 0 !important;
+    font-size: 0.8rem !important;
+    margin-bottom: 0.5rem !important;
+}
+.breadcrumb-item,
+.breadcrumb-item a,
+.breadcrumb-item + .breadcrumb-item::before {
+    color: var(--cm-muted) !important;
+    font-size: 0.8rem !important;
+}
+.breadcrumb-item.active { color: var(--cm-text-sub) !important; }
+.breadcrumb-item a:hover { color: var(--cm-accent) !important; text-decoration: none !important; }
+
+/* ── 6. MAIN CONTENT REGION ───────────────────────────────────────────────── */
+#region-main,
+#cm-main {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    box-shadow: var(--cm-shadow-sm) !important;
+    padding: 2rem !important;
+    color: var(--cm-text) !important;
+}
+
+/* ── 7. CARDS / BLOCKS ────────────────────────────────────────────────────── */
+.card, .box, .generalbox {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    box-shadow: var(--cm-shadow-xs) !important;
+    color: var(--cm-text) !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card:hover {
+    box-shadow: var(--cm-shadow) !important;
+    border-color: var(--cm-border-strong) !important;
+}
+.card-body, .card-header, .card-footer {
+    background-color: transparent !important;
+    color: var(--cm-text) !important;
+}
+.card-header {
+    border-bottom: 1px solid var(--cm-border) !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    padding: 0.875rem 1.25rem !important;
+}
+.card-footer {
+    border-top: 1px solid var(--cm-border) !important;
+    padding: 0.75rem 1.25rem !important;
+}
+
+/* Block widgets */
+.block, .block_tree {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    overflow: hidden;
+    margin-bottom: 1rem !important;
+}
+.block .header, .block-header {
+    background-color: var(--cm-surface-hi) !important;
+    border-bottom: 1px solid var(--cm-border) !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: var(--cm-radius-lg) var(--cm-radius-lg) 0 0 !important;
+}
+.block-title, .block .title {
+    font-family: var(--cm-font-head) !important;
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    color: var(--cm-text) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+}
+.block .content { color: var(--cm-text) !important; padding: 0.75rem 1rem !important; }
+
+/* ── 8. SIDEBAR / DRAWERS ─────────────────────────────────────────────────── */
+[data-region="left-hand-drawer"],
+[data-region="right-hand-drawer"],
+.drawer,
+#nav-drawer {
+    background-color: var(--cm-surface) !important;
+    border-right: 1px solid var(--cm-border) !important;
+    box-shadow: var(--cm-shadow) !important;
+}
+
+/* Course Index */
+.courseindex-item,
+[data-region="courseindex-item"] {
+    border-radius: var(--cm-radius-sm) !important;
+    transition: background 0.15s ease !important;
+}
+.courseindex-item:hover,
+[data-region="courseindex-item"]:hover {
+    background-color: rgba(217,119,6,0.07) !important;
+}
+.courseindex-item--active,
+[data-region="courseindex-item"].active {
+    background-color: rgba(217,119,6,0.12) !important;
+    border-left: 3px solid var(--cm-accent) !important;
+    font-weight: 600 !important;
+}
+.courseindex-section-title {
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    color: var(--cm-muted) !important;
+}
+
+/* ── 9. FORMS & INPUTS ────────────────────────────────────────────────────── */
+input[type="text"], input[type="email"], input[type="password"],
+input[type="search"], input[type="number"], input[type="url"],
+input[type="tel"], input[type="date"], input[type="time"],
+select, textarea, .form-control, .custom-select {
+    background-color: var(--cm-surface-hi) !important;
+    color: var(--cm-text) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius) !important;
+    padding: 0.6rem 0.875rem !important;
+    font-family: var(--cm-font-body) !important;
+    font-size: 0.9rem !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+input:focus, textarea:focus, select:focus, .form-control:focus {
+    border-color: var(--cm-accent) !important;
+    box-shadow: 0 0 0 3px rgba(217,119,6,0.18) !important;
+    outline: none !important;
+    background-color: var(--cm-surface) !important;
+}
+input::placeholder, textarea::placeholder { color: var(--cm-muted) !important; }
+label, .col-form-label, .form-label {
+    color: var(--cm-text) !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+}
+.form-text, .help-block, .text-muted { color: var(--cm-muted) !important; font-size: 0.8rem !important; }
+.form-group, .fitem { margin-bottom: 1.25rem; }
+.fcontainer, .settingsform .fcontainer, .mform .fcontainer {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1rem !important;
+}
+
+/* ── 10. BUTTONS ──────────────────────────────────────────────────────────── */
+.btn {
+    font-family: var(--cm-font-body) !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    border-radius: var(--cm-radius) !important;
+    padding: 0.55rem 1.25rem !important;
+    transition: all 0.15s ease !important;
+    border: 1px solid transparent !important;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-decoration: none !important;
+    line-height: 1.4 !important;
+}
+.btn-primary,
+input[type="submit"],
+button[type="submit"] {
+    background-color: var(--cm-accent) !important;
+    border-color: var(--cm-accent) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 6px rgba(217,119,6,0.3) !important;
+}
+.btn-primary:hover,
+input[type="submit"]:hover,
+button[type="submit"]:hover {
+    background-color: var(--cm-accent-dark) !important;
+    border-color: var(--cm-accent-dark) !important;
+    box-shadow: 0 4px 10px rgba(217,119,6,0.35) !important;
     transform: translateY(-1px);
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   5. MAIN CONTENT — THE GLASS VESSEL
-   ═══════════════════════════════════════════════════════════════════════════ */
-#region-main {
-    background: rgba(255, 255, 255, 0.75) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid var(--glass-edge) !important;
-    border-radius: var(--radius-lg) !important;
-    box-shadow: 
-        0 20px 50px rgba(0, 0, 0, 0.04),
-        0 1px 2px rgba(0,0,0,0.02) !important;
-    padding: 2.5rem !important;
-    margin-top: 1rem !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   6. CARDS — NEON GLASS
-   ═══════════════════════════════════════════════════════════════════════════ */
-.card {
-    background: rgba(255, 255, 255, 0.6) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.5) !important;
-    border-radius: var(--radius-md) !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-}
-
-.card:hover {
-    transform: translateY(-5px) scale(1.01);
-    background: rgba(255, 255, 255, 0.85) !important;
-    box-shadow: 0 12px 30px rgba(79, 70, 229, 0.08) !important;
-    border-color: rgba(79, 70, 229, 0.2) !important;
-}
-
-.card-header {
-    background: none !important;
-    border-bottom: 1px solid rgba(0,0,0,0.05) !important;
-    font-weight: 700 !important;
-    padding: 1.25rem !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   7. BUTTONS — CYBER GLOW
-   ═══════════════════════════════════════════════════════════════════════════ */
-.btn {
-    border-radius: 12px !important;
-    font-weight: 600 !important;
-    text-transform: uppercase;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.05em;
-    padding: 0.75rem 1.5rem !important;
-    transition: all 0.2s ease !important;
-    border: none !important;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
-    box-shadow: 0 4px 12px var(--primary-glow) !important;
-    color: #fff !important;
-}
-
-.btn-primary:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 8px 20px var(--primary-glow) !important;
-    filter: brightness(1.1);
-}
-
 .btn-secondary {
-    background: rgba(255, 255, 255, 0.8) !important;
-    color: var(--primary) !important;
-    border: 1px solid var(--primary) !important;
-    backdrop-filter: blur(4px);
+    background-color: var(--cm-surface-hi) !important;
+    border-color: var(--cm-border-strong) !important;
+    color: var(--cm-text) !important;
+}
+.btn-secondary:hover {
+    background-color: var(--cm-surface) !important;
+    border-color: var(--cm-accent) !important;
+    color: var(--cm-accent) !important;
+}
+.btn-danger  { background-color: var(--cm-danger) !important; border-color: var(--cm-danger) !important; color:#fff !important; }
+.btn-success { background-color: var(--cm-success) !important; border-color: var(--cm-success) !important; color:#fff !important; }
+.btn-warning { background-color: var(--cm-warning) !important; border-color: var(--cm-warning) !important; color:#fff !important; }
+.btn-info    { background-color: var(--cm-info) !important; border-color: var(--cm-info) !important; color:#fff !important; }
+.btn-link    { color: var(--cm-link) !important; background: none !important; border: none !important; box-shadow: none !important; }
+.btn-sm      { font-size: 0.8rem !important; padding: 0.35rem 0.875rem !important; }
+.btn-lg      { font-size: 1rem !important; padding: 0.75rem 1.75rem !important; }
+
+/* ── 11. TABLES ───────────────────────────────────────────────────────────── */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.875rem !important;
+}
+th, td {
+    border: 1px solid var(--cm-border) !important;
+    padding: 0.65rem 0.9rem !important;
+    color: var(--cm-text) !important;
+    text-align: left;
+}
+th {
+    background-color: var(--cm-surface-hi) !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    color: var(--cm-muted) !important;
+}
+tr:hover td { background-color: rgba(217,119,6,0.04) !important; }
+html:not(.dark) tr:nth-child(even) td { background-color: rgba(0,0,0,0.02) !important; }
+html.dark tr:nth-child(even) td       { background-color: rgba(255,255,255,0.02) !important; }
+
+/* Grades table special */
+.gradebook-grade-summary, .user-grade {
+    background-color: var(--cm-surface) !important;
+    border-radius: var(--cm-radius-lg) !important;
+}
+.gradebook-grade-summary .level2 {
+    background-color: var(--cm-surface-hi) !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   8. FORM CONTROLS
-   ═══════════════════════════════════════════════════════════════════════════ */
-.form-control, .custom-select, select {
-    background: rgba(255, 255, 255, 0.5) !important;
-    border: 1px solid rgba(0,0,0,0.08) !important;
-    border-radius: 12px !important;
-    padding: 0.75rem 1rem !important;
-    transition: all 0.2s ease !important;
+/* ── 12. ALERTS / NOTICES ─────────────────────────────────────────────────── */
+.alert {
+    border-radius: var(--cm-radius) !important;
+    border: 1px solid var(--cm-border) !important;
+    background-color: var(--cm-surface-hi) !important;
+    color: var(--cm-text) !important;
+    font-size: 0.875rem !important;
+    padding: 0.875rem 1.125rem !important;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+.alert-info    { border-left: 4px solid #38bdf8 !important; background: rgba(56,189,248,0.06) !important; }
+.alert-success { border-left: 4px solid #4ade80 !important; background: rgba(74,222,128,0.06) !important; }
+.alert-warning { border-left: 4px solid #fbbf24 !important; background: rgba(251,191,36,0.06) !important; }
+.alert-danger  { border-left: 4px solid #f87171 !important; background: rgba(248,113,113,0.06) !important; }
+.alert h4, .alert strong { color: var(--cm-text) !important; font-weight: 700 !important; }
+
+/* ── 13. MODALS / DIALOGUES ───────────────────────────────────────────────── */
+.modal-content,
+.moodle-dialogue-base .moodle-dialogue-wrap {
+    background-color: var(--cm-surface) !important;
+    color: var(--cm-text) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    box-shadow: var(--cm-shadow-lg) !important;
+}
+.modal-header, .moodle-dialogue-hd {
+    background-color: var(--cm-surface-hi) !important;
+    border-bottom: 1px solid var(--cm-border) !important;
+    padding: 1rem 1.25rem !important;
+}
+.modal-footer {
+    border-top: 1px solid var(--cm-border) !important;
+    background-color: var(--cm-surface-hi) !important;
+}
+.modal-title, .moodle-dialogue-hd h1 { color: var(--cm-text) !important; font-size: 1rem !important; }
+.btn-close, .close { filter: none !important; color: var(--cm-muted) !important; }
+html.dark .btn-close { filter: invert(1) !important; }
+
+/* ── 14. DROPDOWNS ────────────────────────────────────────────────────────── */
+.dropdown-menu {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    box-shadow: var(--cm-shadow-lg) !important;
+    padding: 0.4rem !important;
+    min-width: 200px;
+}
+.dropdown-item {
+    color: var(--cm-text) !important;
+    border-radius: var(--cm-radius-sm) !important;
+    padding: 0.45rem 0.875rem !important;
+    font-size: 0.875rem !important;
+    transition: all 0.1s ease !important;
+}
+.dropdown-item:hover, .dropdown-item:focus {
+    background-color: rgba(217,119,6,0.09) !important;
+    color: var(--cm-accent) !important;
+}
+.dropdown-divider { border-color: var(--cm-border) !important; margin: 0.3rem 0 !important; }
+.dropdown-header {
+    color: var(--cm-muted) !important;
+    font-size: 0.7rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    font-weight: 700 !important;
+    padding: 0.5rem 0.875rem 0.3rem !important;
 }
 
-.form-control:focus {
-    background: #fff !important;
-    border-color: var(--primary) !important;
-    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1) !important;
+/* ── 15. BADGES / PILLS ───────────────────────────────────────────────────── */
+.badge {
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    border-radius: 999px !important;
+    padding: 0.2em 0.65em !important;
+    line-height: 1.4 !important;
+}
+.badge-primary, .badge.bg-primary { background-color: var(--cm-accent) !important; color:#fff !important; }
+.badge-success, .badge.bg-success { background-color: var(--cm-success) !important; color:#fff !important; }
+.badge-danger,  .badge.bg-danger  { background-color: var(--cm-danger) !important;  color:#fff !important; }
+.badge-warning, .badge.bg-warning { background-color: var(--cm-warning) !important; color:#fff !important; }
+.badge-info,    .badge.bg-info    { background-color: var(--cm-info) !important;    color:#fff !important; }
+.badge-secondary, .badge.bg-secondary {
+    background-color: var(--cm-surface-hi) !important;
+    color: var(--cm-text-sub) !important;
+    border: 1px solid var(--cm-border) !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   9. CUSTOM LMS ENHANCEMENTS (Course Boxes)
-   ═══════════════════════════════════════════════════════════════════════════ */
-.coursebox {
-    border: 1px solid rgba(255, 255, 255, 0.6) !important;
-    background: rgba(255, 255, 255, 0.45) !important;
-    border-radius: 16px !important;
-    margin-bottom: 1.5rem !important;
-    padding: 1.5rem !important;
+/* ── 16. PAGINATION ───────────────────────────────────────────────────────── */
+.pagination { gap: 2px; }
+.page-item .page-link {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    color: var(--cm-text) !important;
+    border-radius: var(--cm-radius-sm) !important;
+    font-size: 0.875rem !important;
+    padding: 0.4rem 0.75rem !important;
+    transition: all 0.15s ease !important;
 }
+.page-item .page-link:hover { background-color: var(--cm-surface-hi) !important; border-color: var(--cm-accent) !important; color: var(--cm-accent) !important; }
+.page-item.active .page-link { background-color: var(--cm-accent) !important; border-color: var(--cm-accent) !important; color: #fff !important; }
+.page-item.disabled .page-link { color: var(--cm-muted) !important; opacity: 0.5; }
 
-.course-card-image {
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   10. DRAWERS (Moodle specific)
-   ═══════════════════════════════════════════════════════════════════════════ */
-[data-region="left-hand-drawer"], 
-[data-region="right-hand-drawer"],
-.drawer {
-    background: rgba(255, 255, 255, 0.8) !important;
-    backdrop-filter: blur(25px) !important;
-    border-right: 1px solid rgba(0, 0, 0, 0.05) !important;
-}
-
-.courseindex-item--active, 
-.courseindex-item:hover {
-    background: rgba(79, 70, 229, 0.08) !important;
-    color: var(--primary) !important;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   11. PROGRESS BARS
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ── 17. PROGRESS BARS ────────────────────────────────────────────────────── */
 .progress {
-    height: 8px !important;
-    background: rgba(0,0,0,0.05) !important;
-    border-radius: 10px !important;
+    height: 6px !important;
+    background: var(--cm-border) !important;
+    border-radius: 999px !important;
     overflow: hidden;
 }
-
 .progress-bar {
-    background: linear-gradient(90deg, var(--primary), var(--secondary)) !important;
-    box-shadow: 0 0 10px var(--primary-glow);
+    background: linear-gradient(90deg, var(--cm-accent), var(--cm-accent-soft)) !important;
+    border-radius: 999px !important;
+    transition: width 0.6s ease !important;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   12. SCROLLBARS (The Hidden Polish)
-   ═══════════════════════════════════════════════════════════════════════════ */
-::-webkit-scrollbar {
-    width: 6px;
+/* Course completion ring — shown in course cards */
+.completion-info .percentage {
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    color: var(--cm-accent) !important;
 }
-::-webkit-scrollbar-track {
-    background: transparent;
+
+/* ── 18. COURSE & ACTIVITY ITEMS ─────────────────────────────────────────── */
+/* Course listing boxes */
+.coursebox, .course-listitem {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    margin-bottom: 1rem !important;
+    padding: 1.25rem !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
-::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.1);
-    border-radius: 10px;
+.coursebox:hover {
+    box-shadow: var(--cm-shadow) !important;
+    border-color: var(--cm-accent) !important;
 }
-::-webkit-scrollbar-thumb:hover {
-    background: var(--primary);
+.coursebox .coursename a {
+    font-family: var(--cm-font-head) !important;
+    font-weight: 700 !important;
+    font-size: 1.05rem !important;
+    color: var(--cm-text) !important;
+}
+.coursebox .coursename a:hover { color: var(--cm-accent) !important; text-decoration: none !important; }
+.coursebox .summary, .course-description-item {
+    color: var(--cm-text-sub) !important;
+    font-size: 0.875rem !important;
+    line-height: 1.6 !important;
+}
+
+/* Activity items in course view */
+.activity, .section li.activity {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius) !important;
+    margin-bottom: 0.4rem !important;
+    padding: 0.75rem 1rem !important;
+    transition: all 0.15s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    position: relative;
+}
+.activity:hover {
+    border-color: var(--cm-border-strong) !important;
+    background-color: var(--cm-surface-hi) !important;
+    transform: translateX(3px);
+}
+
+/* Activity type left-border indicators */
+.activity.modtype_quiz     { border-left: 3px solid var(--act-quiz) !important; }
+.activity.modtype_assign   { border-left: 3px solid var(--act-assign) !important; }
+.activity.modtype_forum    { border-left: 3px solid var(--act-forum) !important; }
+.activity.modtype_resource { border-left: 3px solid var(--act-resource) !important; }
+.activity.modtype_url      { border-left: 3px solid var(--act-url) !important; }
+.activity.modtype_scorm    { border-left: 3px solid var(--act-scorm) !important; }
+.activity.modtype_page     { border-left: 3px solid var(--act-page) !important; }
+.activity.modtype_book     { border-left: 3px solid var(--act-book) !important; }
+.activity.modtype_lesson   { border-left: 3px solid var(--act-lesson) !important; }
+.activity.modtype_wiki     { border-left: 3px solid var(--act-wiki) !important; }
+.activity.modtype_workshop { border-left: 3px solid var(--act-workshop) !important; }
+.activity.modtype_folder   { border-left: 3px solid var(--act-folder) !important; }
+.activity.modtype_choice   { border-left: 3px solid var(--act-choice) !important; }
+.activity.modtype_feedback { border-left: 3px solid var(--act-feedback) !important; }
+
+/* Completed activity */
+.activity.state-complete,
+.activity.complete,
+.activity[data-state="complete"] {
+    opacity: 0.7;
+}
+.activity.state-complete::after {
+    content: '✓';
+    position: absolute;
+    right: 0.875rem;
+    color: var(--cm-success);
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+/* Locked / unavailable activity */
+.activity.restricted,
+.activity.availabilityinfo {
+    opacity: 0.55;
+}
+.activity.restricted::after {
+    content: '🔒';
+    position: absolute;
+    right: 0.875rem;
+    font-size: 0.75rem;
+}
+
+/* Activity instance name */
+.activity .instancename,
+.activityinstance .instancename {
+    font-weight: 600 !important;
+    color: var(--cm-text) !important;
+    font-size: 0.9rem !important;
+}
+
+/* Section headers */
+.section-summary,
+.course-section-header,
+li.section .section-header,
+.sectionname {
+    background-color: transparent !important;
+    color: var(--cm-text) !important;
+}
+.section .section-header {
+    background: transparent !important;
+    padding: 1rem 0 0.5rem !important;
+    border-bottom: 1px solid var(--cm-border) !important;
+    margin-bottom: 0.75rem !important;
+}
+.section .sectionname,
+.course-section .section-title {
+    font-family: var(--cm-font-head) !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    color: var(--cm-text) !important;
+    letter-spacing: -0.01em !important;
+}
+
+/* Due date badges on activities */
+.cm-due-soon {
+    background: rgba(220,38,38,0.1);
+    color: var(--cm-danger);
+    border: 1px solid rgba(220,38,38,0.2);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.1em 0.55em;
+    margin-left: 0.5rem;
+    white-space: nowrap;
+}
+.cm-due-today {
+    background: rgba(217,119,6,0.12);
+    color: var(--cm-accent);
+    border: 1px solid rgba(217,119,6,0.25);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.1em 0.55em;
+    margin-left: 0.5rem;
+}
+
+/* ── 19. ADMIN / SETTINGS PAGES ───────────────────────────────────────────── */
+#adminsettings, .settingsform, .mform {
+    background-color: transparent !important;
+    color: var(--cm-text) !important;
+}
+
+/* ── 20. TABS ─────────────────────────────────────────────────────────────── */
+.nav-tabs {
+    border-bottom: 2px solid var(--cm-border) !important;
+    gap: 2px;
+}
+.nav-tabs .nav-item .nav-link {
+    color: var(--cm-muted) !important;
+    border: none !important;
+    border-bottom: 2px solid transparent !important;
+    padding: 0.6rem 1rem !important;
+    margin-bottom: -2px !important;
+    font-weight: 500 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+.nav-tabs .nav-item .nav-link.active {
+    color: var(--cm-accent) !important;
+    border-bottom-color: var(--cm-accent) !important;
+    font-weight: 700 !important;
+    background: transparent !important;
+}
+.nav-tabs .nav-item .nav-link:hover {
+    color: var(--cm-accent) !important;
+    background: rgba(217,119,6,0.05) !important;
+}
+.tab-content { padding: 1.25rem 0 !important; }
+
+/* ── 21. QUIZ / ASSESSMENT UI ────────────────────────────────────────────── */
+/* Quiz navigation */
+.qn-container, .qnbutton {
+    border-radius: var(--cm-radius-sm) !important;
+}
+.qnbutton {
+    background-color: var(--cm-surface-hi) !important;
+    border: 1px solid var(--cm-border) !important;
+    color: var(--cm-text) !important;
+    font-weight: 600 !important;
+}
+.qnbutton:hover { background: rgba(217,119,6,0.1) !important; border-color: var(--cm-accent) !important; }
+.qnbutton.answersaved { background: rgba(22,163,74,0.12) !important; border-color: var(--cm-success) !important; color: var(--cm-success) !important; }
+.qnbutton.correct     { background: rgba(22,163,74,0.15) !important; border-color: var(--cm-success) !important; }
+.qnbutton.incorrect   { background: rgba(220,38,38,0.12) !important; border-color: var(--cm-danger) !important; }
+.qnbutton.flagged     { background: rgba(217,119,6,0.15) !important; border-color: var(--cm-accent) !important; }
+
+/* Question blocks */
+.que {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.25rem !important;
+}
+.que .questionflag { cursor: pointer; }
+.que .formulation {
+    background-color: var(--cm-surface-lo) !important;
+    border-radius: var(--cm-radius) !important;
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    border-left: 3px solid var(--act-quiz) !important;
+}
+.que .outcome { padding: 0.75rem 1rem; border-radius: var(--cm-radius-sm) !important; font-size: 0.875rem; }
+.que .correct  { background: rgba(22,163,74,0.08) !important; border-left: 3px solid var(--cm-success) !important; }
+.que .incorrect { background: rgba(220,38,38,0.08) !important; border-left: 3px solid var(--cm-danger) !important; }
+.que .partiallycorrect { background: rgba(217,119,6,0.08) !important; border-left: 3px solid var(--cm-accent) !important; }
+
+/* Timer in quizzes */
+#quiz-timer, #quiz_timer {
+    background-color: var(--cm-surface-hi) !important;
+    border: 2px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius) !important;
+    padding: 0.4rem 0.875rem !important;
+    font-family: var(--cm-font-mono) !important;
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+    color: var(--cm-text) !important;
+}
+
+/* ── 22. FOCUS MODE BUTTON ────────────────────────────────────────────────── */
+.cm-focus-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: var(--cm-radius);
+    border: 1px solid var(--cm-border);
+    background: var(--cm-surface-hi);
+    color: var(--cm-muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    font-family: var(--cm-font-body);
+}
+.cm-focus-btn:hover {
+    border-color: var(--cm-accent);
+    color: var(--cm-accent);
+    background: rgba(217,119,6,0.07);
+}
+
+/* ── 23. THEME TOGGLE BUTTON ─────────────────────────────────────────────── */
+#cm-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--cm-radius);
+    border: 1px solid var(--cm-border);
+    background: var(--cm-surface-hi);
+    color: var(--cm-text);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    font-family: var(--cm-font-body);
+    line-height: 1;
+}
+#cm-theme-toggle:hover {
+    border-color: var(--cm-accent);
+    color: var(--cm-accent);
+}
+#cm-theme-toggle .icon-dark  { display: none; }
+#cm-theme-toggle .icon-light { display: inline-flex; }
+html.dark #cm-theme-toggle .icon-dark  { display: inline-flex; }
+html.dark #cm-theme-toggle .icon-light { display: none; }
+
+/* ── 24. READING PROGRESS BAR ────────────────────────────────────────────── */
+#cm-read-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 3px;
+    background: linear-gradient(90deg, var(--cm-accent), var(--cm-accent-soft));
+    z-index: 9999;
+    transition: width 0.1s linear;
+    border-radius: 0 999px 999px 0;
+}
+
+/* ── 25. HEADER CHROME ────────────────────────────────────────────────────── */
+#cm-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background-color: var(--cm-surface);
+    border-bottom: 1px solid var(--cm-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    height: var(--cm-nav-h);
+    display: flex;
+    align-items: center;
+    box-shadow: var(--cm-shadow-xs);
+}
+#cm-header .site-name {
+    font-family: var(--cm-font-head);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--cm-text);
+    text-decoration: none !important;
+    transition: color 0.15s;
+}
+html.dark #cm-header .site-name {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+#cm-header .site-name:hover {
+    color: var(--cm-accent);
+}
+
+/* ── 26. FOOTER ───────────────────────────────────────────────────────────── */
+#cm-footer {
+    background-color: var(--cm-surface);
+    border-top: 1px solid var(--cm-border);
+    color: var(--cm-muted);
+    font-size: 0.8rem;
+}
+#cm-footer a { color: var(--cm-muted) !important; }
+#cm-footer a:hover { color: var(--cm-text) !important; text-decoration: none !important; }
+
+/* ── 27. USER MENU / AVATAR ───────────────────────────────────────────────── */
+.usermenu .userbutton {
+    border-radius: var(--cm-radius-lg) !important;
+    padding: 4px 10px !important;
+    border: 1px solid var(--cm-border) !important;
+    background: var(--cm-surface-hi) !important;
+    transition: all 0.15s !important;
+}
+.usermenu .userbutton:hover {
+    border-color: var(--cm-accent) !important;
+    background: rgba(217,119,6,0.07) !important;
+}
+.userinitials {
+    background-color: var(--cm-accent) !important;
+    color: #fff !important;
+    font-family: var(--cm-font-head) !important;
+    font-weight: 700 !important;
+}
+
+/* ── 28. NOTIFICATIONS ────────────────────────────────────────────────────── */
+.popover-region-container, .popover-region {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    box-shadow: var(--cm-shadow-lg) !important;
+}
+.notification, .popover-region-notification {
+    border-bottom: 1px solid var(--cm-border) !important;
+    background: transparent !important;
+    color: var(--cm-text) !important;
+    transition: background 0.1s !important;
+}
+.notification:hover { background: var(--cm-surface-hi) !important; }
+.notification.unread { background: rgba(217,119,6,0.06) !important; }
+.notification.unread::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: var(--cm-accent);
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+/* ── 29. CALENDAR ─────────────────────────────────────────────────────────── */
+.calendartable {
+    border-radius: var(--cm-radius-lg) !important;
+    overflow: hidden;
+}
+.calendar_event_course { background-color: var(--cm-accent) !important; border-radius: 3px !important; color: #fff !important; }
+.calendar_event_user   { background-color: var(--cm-info) !important; border-radius: 3px !important; color: #fff !important; }
+.calendar_event_site   { background-color: var(--cm-success) !important; border-radius: 3px !important; color: #fff !important; }
+.calendar-event-popover {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    box-shadow: var(--cm-shadow-lg) !important;
+    color: var(--cm-text) !important;
+}
+
+/* ── 30. FORUM ────────────────────────────────────────────────────────────── */
+.forumpost, .forum-post-container {
+    background-color: var(--cm-surface) !important;
+    border: 1px solid var(--cm-border) !important;
+    border-radius: var(--cm-radius-lg) !important;
+    margin-bottom: 0.75rem !important;
+    padding: 1.25rem !important;
+    color: var(--cm-text) !important;
+}
+.forumpost .author, .forum-author {
+    font-weight: 700 !important;
+    color: var(--cm-text) !important;
+    font-size: 0.875rem !important;
+}
+.forumpost .posting, .forum-post-text {
+    color: var(--cm-text-sub) !important;
+    line-height: var(--cm-line-content) !important;
+}
+
+/* ── 31. SCROLLBAR POLISH ─────────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 7px; height: 7px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: var(--cm-border-strong); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover  { background: var(--cm-accent); }
+
+/* ── 32. ACCESSIBILITY & FOCUS ────────────────────────────────────────────── */
+:focus-visible {
+    outline: 2px solid var(--cm-accent) !important;
+    outline-offset: 2px !important;
+    border-radius: 3px;
+}
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0,0,0,0) !important;
+    border: 0 !important;
+}
+
+/* ── 33. ANIMATIONS ───────────────────────────────────────────────────────── */
+@keyframes cm-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.card, .activity, .coursebox, .que, .forumpost {
+    animation: cm-fade-in 0.25s ease both;
+}
+
+/* Reduce motion for those who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ── 34. RESPONSIVE ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+    #region-main, #cm-main { padding: 1.25rem !important; }
+    .card-body { padding: 1rem !important; }
+    h1 { font-size: 1.5rem !important; }
+    h2 { font-size: 1.25rem !important; }
+}
+
+/* ── 35. PRINT STYLES (for study materials) ───────────────────────────────── */
+@media print {
+    body {
+        background: #fff !important;
+        color: #000 !important;
+        background-image: none !important;
+    }
+    #cm-header, #cm-footer, .drawer, #nav-drawer,
+    .cm-focus-btn, #cm-theme-toggle, #cm-read-progress,
+    .block_settings, [data-region="right-hand-drawer"] { display: none !important; }
+    #region-main, #cm-main {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    a { color: #000 !important; }
+    .activity { border: 1px solid #ccc !important; border-left: 3px solid #000 !important; }
 }

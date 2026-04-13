@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="mod/cpa/db" VERSION="20260413" COMMENT="CPA — Coding and Programming Assessment module"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
+  <TABLES>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         Main instance table — one row per activity added to a course
+    ───────────────────────────────────────────────────────────────────────── -->
+    <TABLE NAME="cpa" COMMENT="CPA activity instances">
+      <FIELDS>
+        <FIELD NAME="id"                  TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="course"              TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"   COMMENT="Course this instance belongs to"/>
+        <FIELD NAME="name"                TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT=""/>
+        <FIELD NAME="intro"               TYPE="text"              NOTNULL="false"               COMMENT="Module description"/>
+        <FIELD NAME="introformat"         TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="0"/>
+
+        <!-- Timing -->
+        <FIELD NAME="timeopen"            TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"   COMMENT="Unix timestamp when assessment opens; 0 = always"/>
+        <FIELD NAME="timeclose"           TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"   COMMENT="Unix timestamp when assessment closes; 0 = never"/>
+        <FIELD NAME="timelimit"           TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"   COMMENT="Time limit in seconds; 0 = no limit"/>
+        <FIELD NAME="overduehandling"     TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT="autosubmit" COMMENT="autosubmit|graceperiod|autoabandon"/>
+        <FIELD NAME="graceperiod"         TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+
+        <!-- Attempts -->
+        <FIELD NAME="attempts"            TYPE="int"  LENGTH="6"  NOTNULL="true"  DEFAULT="1"   COMMENT="Max allowed attempts; 0 = unlimited"/>
+        <FIELD NAME="grademethod"         TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="1"   COMMENT="1=highest, 2=average, 3=first, 4=last"/>
+
+        <!-- Assessment type -->
+        <FIELD NAME="assessmenttype"      TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT="mixed" COMMENT="mcq|coding|mixed"/>
+        <FIELD NAME="passscore"           TYPE="number" LENGTH="6" DECIMALS="2" NOTNULL="true" DEFAULT="50" COMMENT="Percentage required to pass"/>
+        <FIELD NAME="shufflequestions"    TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="shuffleanswers"      TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="questionsperpage"    TYPE="int"  LENGTH="6"  NOTNULL="true"  DEFAULT="1"   COMMENT="0 = all on one page"/>
+        <FIELD NAME="preferredlanguage"   TYPE="char" LENGTH="32" NOTNULL="true"  DEFAULT="python" COMMENT="Default coding language"/>
+        <FIELD NAME="allowlanguageswitch" TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+
+        <!-- Proctoring -->
+        <FIELD NAME="proctoringmode"      TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT="strict"
+               COMMENT="none|basic|strict|maximum"/>
+        <FIELD NAME="fullscreenrequired"  TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="tabswitchdetect"     TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="disablepaste"        TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="disablerightclick"   TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="blockdevtools"       TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="blockprintscreen"    TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="violationthreshold"  TYPE="int"  LENGTH="6"  NOTNULL="true"  DEFAULT="3"
+               COMMENT="Auto-submit after N violations; 0 = never auto-submit"/>
+        <FIELD NAME="warningsonviolation" TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="webcamrequired"      TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="0"   COMMENT="Prompt for webcam access (advisory)"/>
+        <FIELD NAME="idverificationprompt" TYPE="int" LENGTH="2"  NOTNULL="true"  DEFAULT="0"   COMMENT="Ask student to confirm identity before start"/>
+
+        <!-- Feedback & review -->
+        <FIELD NAME="showfeedback"        TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="showansweroncomplete" TYPE="int" LENGTH="2"  NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="reviewafterclose"    TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"/>
+
+        <!-- Grading -->
+        <FIELD NAME="grade"               TYPE="number" LENGTH="10" DECIMALS="5" NOTNULL="true" DEFAULT="100"/>
+
+        <!-- Timestamps -->
+        <FIELD NAME="timecreated"         TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"        TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         Questions owned by a CPA instance (native + question-bank references)
+    ───────────────────────────────────────────────────────────────────────── -->
+    <TABLE NAME="cpa_questions" COMMENT="Questions belonging to a CPA instance">
+      <FIELDS>
+        <FIELD NAME="id"             TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="cpaid"          TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" COMMENT="FK → cpa.id"/>
+        <FIELD NAME="qbankquestionid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" COMMENT="0 = native question; >0 = question bank ID"/>
+        <FIELD NAME="questiontype"   TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="mcq_single"
+               COMMENT="mcq_single|mcq_multiple|truefalse|coding|fill_code|short_answer"/>
+        <FIELD NAME="questiontext"   TYPE="text"             NOTNULL="true"/>
+        <FIELD NAME="questionformat" TYPE="int"  LENGTH="4"  NOTNULL="true" DEFAULT="1"/>
+        <FIELD NAME="codetemplate"   TYPE="text"             NOTNULL="false" COMMENT="Starter code for coding questions"/>
+        <FIELD NAME="codelanguage"   TYPE="char" LENGTH="32" NOTNULL="true"  DEFAULT="python"/>
+        <FIELD NAME="expectedoutput" TYPE="text"             NOTNULL="false" COMMENT="Expected stdout for auto-grading"/>
+        <FIELD NAME="testcasesjson"  TYPE="text"             NOTNULL="false" COMMENT="JSON array of {input, expected} for code tests"/>
+        <FIELD NAME="points"         TYPE="number" LENGTH="8" DECIMALS="2" NOTNULL="true" DEFAULT="1"/>
+        <FIELD NAME="difficulty"     TYPE="char" LENGTH="12" NOTNULL="true" DEFAULT="medium"
+               COMMENT="easy|medium|hard|expert"/>
+        <FIELD NAME="tags"           TYPE="text"             NOTNULL="false" COMMENT="Comma-separated tags"/>
+        <FIELD NAME="ordering"       TYPE="int"  LENGTH="6"  NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timecreated"    TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timemodified"   TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="cpaid"   TYPE="foreign" FIELDS="cpaid" REFTABLE="cpa" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="cpaid" UNIQUE="false" FIELDS="cpaid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- MCQ / True-False answer options -->
+    <TABLE NAME="cpa_question_options" COMMENT="Answer options for MCQ and True/False questions">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="questionid"   TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0" COMMENT="FK → cpa_questions.id"/>
+        <FIELD NAME="optiontext"   TYPE="text"             NOTNULL="true"/>
+        <FIELD NAME="optionformat" TYPE="int"  LENGTH="4"  NOTNULL="true" DEFAULT="1"/>
+        <FIELD NAME="iscorrect"    TYPE="int"  LENGTH="2"  NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="feedback"     TYPE="text"             NOTNULL="false"/>
+        <FIELD NAME="ordering"     TYPE="int"  LENGTH="6"  NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"    TYPE="primary" FIELDS="id"/>
+        <KEY NAME="questionid" TYPE="foreign" FIELDS="questionid" REFTABLE="cpa_questions" REFFIELDS="id"/>
+      </KEYS>
+    </TABLE>
+
+    <!-- ─────────────────────────────────────────────────────────────────────
+         Student attempts
+    ───────────────────────────────────────────────────────────────────────── -->
+    <TABLE NAME="cpa_attempts" COMMENT="Student assessment attempts">
+      <FIELDS>
+        <FIELD NAME="id"            TYPE="int"    LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="cpaid"         TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="userid"        TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="attempt"       TYPE="int"    LENGTH="6"  NOTNULL="true"  DEFAULT="1"   COMMENT="Attempt number"/>
+        <FIELD NAME="status"        TYPE="char"   LENGTH="16" NOTNULL="true"  DEFAULT="inprogress"
+               COMMENT="inprogress|submitted|graded|abandoned"/>
+        <FIELD NAME="currentpage"   TYPE="int"    LENGTH="6"  NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="questionsorder" TYPE="text"              NOTNULL="false" COMMENT="JSON-encoded question order for this attempt"/>
+        <FIELD NAME="timestart"     TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timefinish"    TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"  TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="violations"    TYPE="int"    LENGTH="6"  NOTNULL="true"  DEFAULT="0"   COMMENT="Running violation count"/>
+        <FIELD NAME="autosubmitted" TYPE="int"    LENGTH="2"  NOTNULL="true"  DEFAULT="0"   COMMENT="1 if auto-submitted by proctoring"/>
+        <FIELD NAME="sumgrades"     TYPE="number" LENGTH="10" DECIMALS="5"    NOTNULL="false" COMMENT="Raw grade sum"/>
+        <FIELD NAME="grade"         TYPE="number" LENGTH="10" DECIMALS="5"    NOTNULL="false" COMMENT="Percentage grade after weighting"/>
+        <FIELD NAME="passed"        TYPE="int"    LENGTH="2"  NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="gradedby"      TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"   COMMENT="userid who graded, 0 = auto"/>
+        <FIELD NAME="gradedtime"    TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="feedback"      TYPE="text"               NOTNULL="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="cpaid"   TYPE="foreign" FIELDS="cpaid"  REFTABLE="cpa" REFFIELDS="id"/>
+        <KEY NAME="userid"  TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="cpaid_userid" UNIQUE="false" FIELDS="cpaid, userid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Student answers (one row per question per attempt) -->
+    <TABLE NAME="cpa_answers" COMMENT="Student answers to individual questions">
+      <FIELDS>
+        <FIELD NAME="id"              TYPE="int"    LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="attemptid"       TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="questionid"      TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="answertext"      TYPE="text"               NOTNULL="false" COMMENT="Short/fill-in answers"/>
+        <FIELD NAME="answercode"      TYPE="longtext"           NOTNULL="false" COMMENT="Submitted code"/>
+        <FIELD NAME="codelanguage"    TYPE="char"   LENGTH="32" NOTNULL="true"  DEFAULT=""/>
+        <FIELD NAME="selectedoptions" TYPE="text"               NOTNULL="false" COMMENT="JSON array of selected option IDs"/>
+        <FIELD NAME="executionresult" TYPE="text"               NOTNULL="false" COMMENT="JSON with stdout, stderr, passed_tests"/>
+        <FIELD NAME="score"           TYPE="number" LENGTH="8"  DECIMALS="2"    NOTNULL="false"/>
+        <FIELD NAME="maxscore"        TYPE="number" LENGTH="8"  DECIMALS="2"    NOTNULL="true"  DEFAULT="1"/>
+        <FIELD NAME="feedback"        TYPE="text"               NOTNULL="false"/>
+        <FIELD NAME="iscorrect"       TYPE="int"    LENGTH="2"  NOTNULL="true"  DEFAULT="0"  COMMENT="-1=ungraded,0=wrong,1=partial,2=correct"/>
+        <FIELD NAME="timecreated"     TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"    TYPE="int"    LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"    TYPE="primary" FIELDS="id"/>
+        <KEY NAME="attemptid"  TYPE="foreign" FIELDS="attemptid"  REFTABLE="cpa_attempts" REFFIELDS="id"/>
+        <KEY NAME="questionid" TYPE="foreign" FIELDS="questionid" REFTABLE="cpa_questions" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="attemptid" UNIQUE="false" FIELDS="attemptid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Proctoring violations log -->
+    <TABLE NAME="cpa_violations" COMMENT="Proctoring violation events">
+      <FIELDS>
+        <FIELD NAME="id"          TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="attemptid"   TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="userid"      TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="type"        TYPE="char" LENGTH="32" NOTNULL="true" DEFAULT=""
+               COMMENT="tabswitch|fullscreen_exit|devtools|paste|rightclick|printscreen|idle_timeout|force_submit"/>
+        <FIELD NAME="severity"    TYPE="char" LENGTH="8"  NOTNULL="true" DEFAULT="warning"
+               COMMENT="info|warning|critical"/>
+        <FIELD NAME="details"     TYPE="text"             NOTNULL="false" COMMENT="Extra context (URL, key combo, etc.)"/>
+        <FIELD NAME="useragent"   TYPE="text"             NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"   TYPE="primary" FIELDS="id"/>
+        <KEY NAME="attemptid" TYPE="foreign" FIELDS="attemptid" REFTABLE="cpa_attempts" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="attemptid" UNIQUE="false" FIELDS="attemptid"/>
+        <INDEX NAME="userid"    UNIQUE="false" FIELDS="userid"/>
+      </INDEXES>
+    </TABLE>
+
+  </TABLES>
+</XMLDB>

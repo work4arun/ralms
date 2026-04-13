@@ -1,0 +1,288 @@
+/**
+ * styles.css — Plugin-specific styles for mod_cpa.
+ *
+ * Inherits the site's --cm-* custom-property design tokens from the
+ * classic_modern theme. All colours reference those tokens so dark/light
+ * mode switches automatically.
+ *
+ * @package    mod_cpa
+ * @copyright  2026 CPA Contributors
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+/* ── Reset / base ──────────────────────────────────────────────────────────── */
+.cpa-view-page *,
+.cpa-attempt-page * {
+    box-sizing: border-box;
+}
+
+/* ── View page: meta-card grid ─────────────────────────────────────────────── */
+.cpa-meta-card {
+    transition: transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1),
+                box-shadow 0.18s ease;
+}
+.cpa-meta-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(37, 99, 235, 0.12) !important;
+}
+
+/* ── Start button pulse ─────────────────────────────────────────────────────── */
+.cpa-start-btn {
+    background: linear-gradient(135deg, #2563eb, #6366f1) !important;
+    border: none !important;
+    color: #fff !important;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.18s cubic-bezier(0.34, 1.4, 0.64, 1),
+                box-shadow 0.18s ease;
+}
+.cpa-start-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 30%,
+                rgba(255,255,255,0.18) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.45s ease;
+}
+.cpa-start-btn:hover::before { transform: translateX(200%); }
+.cpa-start-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 28px rgba(37,99,235,0.4) !important;
+}
+.cpa-start-btn:active {
+    transform: translateY(1px) scale(0.98) !important;
+    transition-duration: 0.08s !important;
+}
+
+/* ── Proctoring notice ─────────────────────────────────────────────────────── */
+.cpa-proctor-notice {
+    animation: cpa-fade-up 0.4s ease both;
+    animation-delay: 0.15s;
+}
+
+/* ── Attempts table ─────────────────────────────────────────────────────────── */
+.cpa-attempts-table tr {
+    transition: background 0.15s ease;
+}
+.cpa-attempts-table tbody tr:hover {
+    background: var(--cm-surface-hi, #f9fafb);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  ATTEMPT PAGE                                                               */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Question card entrance ─────────────────────────────────────────────────── */
+.cpa-question-card {
+    animation: cpa-fade-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.cpa-question-card:nth-child(1) { animation-delay: 0.04s; }
+.cpa-question-card:nth-child(2) { animation-delay: 0.09s; }
+.cpa-question-card:nth-child(3) { animation-delay: 0.13s; }
+.cpa-question-card:nth-child(4) { animation-delay: 0.17s; }
+.cpa-question-card:nth-child(n+5) { animation-delay: 0.20s; }
+
+/* ── MCQ option hover ───────────────────────────────────────────────────────── */
+.cpa-option {
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease,
+                transform 0.12s cubic-bezier(0.34, 1.4, 0.64, 1) !important;
+}
+.cpa-option:hover {
+    border-color: #93c5fd !important;
+    background: rgba(37,99,235,0.03) !important;
+    transform: translateX(3px);
+}
+.cpa-option:active {
+    transform: scale(0.99) translateX(2px);
+}
+
+/* ── Question navigator dots ─────────────────────────────────────────────────── */
+.cpa-qdot {
+    transition: transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+                background 0.15s ease, color 0.15s ease;
+}
+.cpa-qdot:hover {
+    transform: scale(1.18);
+}
+
+/* ── Monaco coding panel ─────────────────────────────────────────────────────── */
+.cpa-coding-panel {
+    transition: box-shadow 0.2s ease;
+}
+.cpa-coding-panel:focus-within {
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.3), 0 4px 20px rgba(37,99,235,0.1);
+    border-color: #93c5fd !important;
+}
+
+/* ── Run button ─────────────────────────────────────────────────────────────── */
+.cpa-run-btn {
+    transition: transform 0.15s cubic-bezier(0.34, 1.4, 0.64, 1),
+                box-shadow 0.15s ease !important;
+}
+.cpa-run-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 4px 14px rgba(37,99,235,0.35) !important;
+}
+.cpa-run-btn:active:not(:disabled) {
+    transform: scale(0.97) !important;
+}
+.cpa-run-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Output panel scroll ────────────────────────────────────────────────────── */
+.cpa-output-panel {
+    scrollbar-width: thin;
+    scrollbar-color: #45475a transparent;
+}
+.cpa-output-panel::-webkit-scrollbar { width: 6px; }
+.cpa-output-panel::-webkit-scrollbar-track { background: transparent; }
+.cpa-output-panel::-webkit-scrollbar-thumb { background: #45475a; border-radius: 3px; }
+
+/* ── Overlays (fullscreen gate, pre-start) ──────────────────────────────────── */
+#cpa-fullscreen-gate,
+#cpa-prestart-overlay {
+    animation: cpa-overlay-in 0.25s ease both;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── Violation toast ─────────────────────────────────────────────────────────── */
+#cpa-violation-toast {
+    animation: cpa-toast-in 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+/* ── Timer pulse when low ────────────────────────────────────────────────────── */
+#cpa-timer[data-low="1"] {
+    animation: cpa-timer-pulse 1s ease infinite;
+}
+
+/* ── Top bar shimmer accent ──────────────────────────────────────────────────── */
+.cpa-topbar::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #2563eb, #6366f1, #06b6d4, #6366f1, #2563eb);
+    background-size: 200% 100%;
+    animation: cpa-shimmer 3s linear infinite;
+}
+.cpa-topbar { position: relative; }
+
+/* ── Short answer focus ────────────────────────────────────────────────────── */
+.cpa-short-answer:focus {
+    outline: none;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/*  RESULTS PAGE                                                                */
+/* ─────────────────────────────────────────────────────────────────────────── */
+.cpa-results-card {
+    animation: cpa-fade-up 0.35s ease both;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  KEYFRAMES                                                                   */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes cpa-fade-up {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)     scale(1); }
+}
+
+@keyframes cpa-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes cpa-toast-in {
+    0%   { opacity: 0; transform: translateX(30px) scale(0.9); }
+    65%  { transform: translateX(-4px) scale(1.01); }
+    100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes cpa-timer-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+}
+
+@keyframes cpa-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/*  RESPONSIVE TWEAKS                                                           */
+/* ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .cpa-topbar {
+        flex-direction: column;
+        height: auto !important;
+        padding: .5rem 1rem !important;
+        gap: .4rem;
+    }
+    .cpa-qnav {
+        padding: .4rem .75rem !important;
+    }
+    .cpa-questions-area {
+        padding: 1rem .75rem !important;
+    }
+    .cpa-question-card {
+        padding: 1.25rem !important;
+    }
+    .cpa-meta-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/*  DARK MODE OVERRIDES                                                         */
+/* ─────────────────────────────────────────────────────────────────────────── */
+html.dark .cpa-option {
+    border-color: var(--cm-border, #2d3748) !important;
+    background: var(--cm-surface, #0d1424) !important;
+    color: var(--cm-text, #e5e7eb);
+}
+html.dark .cpa-option:hover {
+    border-color: #3b82f6 !important;
+    background: rgba(37,99,235,0.08) !important;
+}
+html.dark .cpa-short-answer {
+    background: var(--cm-surface, #0d1424) !important;
+    color: var(--cm-text, #e5e7eb) !important;
+    border-color: var(--cm-border, #2d3748) !important;
+}
+html.dark .cpa-short-answer:focus {
+    border-color: #2563eb !important;
+}
+html.dark .cpa-meta-card {
+    border-color: var(--cm-border, #2d3748) !important;
+}
+html.dark .cpa-question-card {
+    background: var(--cm-surface, #0d1424) !important;
+    border-color: var(--cm-border, #2d3748) !important;
+}
+html.dark .cpa-qnav {
+    background: var(--cm-surface, #0d1424) !important;
+    border-color: var(--cm-border, #2d3748) !important;
+}
+html.dark .cpa-qdot:not([style*="background:#2563eb"]):not([style*="background:#d1fae5"]) {
+    background: var(--cm-surface-hi, #1a2235) !important;
+    color: var(--cm-text, #e5e7eb) !important;
+}
+
+/* ── Print: hide proctoring UI ────────────────────────────────────────────── */
+@media print {
+    #cpa-fullscreen-gate,
+    #cpa-prestart-overlay,
+    #cpa-violation-toast,
+    .cpa-topbar,
+    .cpa-qnav,
+    .cpa-run-btn { display: none !important; }
+}

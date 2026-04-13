@@ -91,6 +91,7 @@
     --act-folder:   #854d0e;
     --act-choice:   #7c3aed;
     --act-feedback: #0284c7;
+    --act-cpa:      #4f46e5;
 }
 
 /* Dark mode tokens */
@@ -889,6 +890,7 @@ html.dark .btn-close { filter: invert(1) !important; }
 .activity.modtype_folder   { border-left: 3px solid var(--act-folder) !important; }
 .activity.modtype_choice   { border-left: 3px solid var(--act-choice) !important; }
 .activity.modtype_feedback { border-left: 3px solid var(--act-feedback) !important; }
+.activity.modtype_cpa      { border-left: 3px solid var(--act-cpa) !important; }
 
 /* Completion indicators */
 .activity.state-complete { opacity: 0.72; }

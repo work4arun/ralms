@@ -334,7 +334,7 @@ if ($mode === 'overview' && $canGrade):
     </h3>
     <form method="post"
           action="<?= new moodle_url('/mod/cpa/results.php',['id'=>$cm->id,'mode'=>'grade','attemptid'=>$attempt->id,'action'=>'savegrades']) ?>">
-        <?= sesskey_html() ?>
+        <input type="hidden" name="sesskey" value="<?= s(sesskey()) ?>">
         <div style="max-width:900px">
         <?php foreach ($questions as $qi => $q):
             $ans = $answers[$q->id] ?? null;

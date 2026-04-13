@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
  * @param  string $feature  FEATURE_* constant name
  * @return bool|null        true = supported, false = not supported, null = unknown
  */
-function cpa_supports(string $feature): ?bool {
+function cpa_supports($feature) {
     switch ($feature) {
         case FEATURE_USES_QUESTIONS:        return true;
         case FEATURE_GRADE_HAS_GRADE:       return true;

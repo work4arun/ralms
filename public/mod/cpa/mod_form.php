@@ -268,7 +268,7 @@ class mod_cpa_mod_form extends moodleform_mod {
      * @param  array $defaultvalues  Reference to default values array
      * @return void
      */
-    public function data_preprocessing(array &$defaultvalues): void {
+    public function data_preprocessing(&$defaultvalues) {
         parent::data_preprocessing($defaultvalues);
 
         // Ensure boolean fields default to 0 if absent.

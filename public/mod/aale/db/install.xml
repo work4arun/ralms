@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="mod/aale/db" VERSION="20260413" COMMENT="AALE — Active Adaptive Learning Environment"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
+  <TABLES>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         Main instance — one row per activity added to a course
+         NOTE: all mod_form settings columns included here so aale_add_instance
+         can insert the full form object without stripping fields.
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale" COMMENT="AALE activity instances">
+      <FIELDS>
+        <FIELD NAME="id"                          TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="course"                      TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="name"                        TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT=""/>
+        <FIELD NAME="intro"                       TYPE="text"              NOTNULL="false"/>
+        <FIELD NAME="introformat"                 TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="1"/>
+        <!-- Settings saved from mod_form -->
+        <FIELD NAME="max_sessions"                TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="16"
+               COMMENT="Maximum sessions per booking (1–16)"/>
+        <FIELD NAME="allow_cancellation"          TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"
+               COMMENT="1 = students may cancel their bookings"/>
+        <FIELD NAME="max_bookings_per_student"    TYPE="int"  LENGTH="6"  NOTNULL="true"  DEFAULT="1"
+               COMMENT="Maximum total bookings a student may hold across all windows"/>
+        <FIELD NAME="cpa_enabled"                 TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"
+               COMMENT="1 = CPA assessment orchestration is active for this instance"/>
+        <FIELD NAME="default_questions_per_student" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="2"
+               COMMENT="Default number of questions assigned per student per CPA booking"/>
+        <FIELD NAME="allow_level_selection"       TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"
+               COMMENT="1 = students can choose their level when booking CPA slots"/>
+        <FIELD NAME="allow_track_selection"       TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"
+               COMMENT="1 = students can choose their subject track when booking CPA slots"/>
+        <FIELD NAME="coins_enabled"               TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="1"
+               COMMENT="1 = reward coins system is active for this instance"/>
+        <FIELD NAME="default_coins_per_level"     TYPE="text"              NOTNULL="false"
+               COMMENT="JSON object {level: coins} used as default when creating CPA slots"/>
+        <FIELD NAME="timecreated"                 TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"                TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         LAYER 1 — Slot windows (when booking is visible/open to students)
+         FIELD NAME change: aale_id → aaleid  (matches locallib.php queries)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale_windows" COMMENT="Layer-1 slot windows — controls when students can book">
+      <FIELDS>
+        <FIELD NAME="id"             TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="aaleid"         TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale.id"/>
+        <FIELD NAME="name"           TYPE="char" LENGTH="255" NOTNULL="true" DEFAULT=""
+               COMMENT="e.g. Week 3 Slot Booking"/>
+        <FIELD NAME="bookingopen"    TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Unix TS when booking window opens for students"/>
+        <FIELD NAME="bookingclose"   TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Unix TS when booking window closes"/>
+        <FIELD NAME="status"         TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT="draft"
+               COMMENT="draft|open|closed"/>
+        <FIELD NAME="createdby"      TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timecreated"    TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"   TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="aaleid"  TYPE="foreign" FIELDS="aaleid" REFTABLE="aale" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="aaleid" UNIQUE="false" FIELDS="aaleid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         LAYER 2 — Slot details (faculty / venue / time / mode)
+         Multiple slots can exist under one window (one per faculty/session)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale_slots" COMMENT="Layer-2 slot details — faculty, venue, date/time, mode">
+      <FIELDS>
+        <FIELD NAME="id"               TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="windowid"         TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale_windows.id"/>
+        <FIELD NAME="slotmode"         TYPE="char" LENGTH="8"  NOTNULL="true"  DEFAULT="class"
+               COMMENT="class|cpa"/>
+        <FIELD NAME="teacherid"        TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Enrolled teacher (both modes)"/>
+        <FIELD NAME="venue"            TYPE="char" LENGTH="128" NOTNULL="true" DEFAULT=""
+               COMMENT="Room / lab number"/>
+        <FIELD NAME="classdate"        TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Date of the class/assessment (unix date)"/>
+        <FIELD NAME="timestart"        TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timeend"          TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="maxstudents"      TYPE="int"  LENGTH="6"  NOTNULL="true"  DEFAULT="30"/>
+        <!-- Class-mode only -->
+        <FIELD NAME="att_sessions"     TYPE="text"             NOTNULL="false"
+               COMMENT="JSON array of session numbers selected (1–16). FN=1,2; AN=3,4 per day"/>
+        <!-- CPA-mode only -->
+        <FIELD NAME="assessmenttype"   TYPE="char" LENGTH="8"  NOTNULL="true"  DEFAULT="coding"
+               COMMENT="coding|mcq"/>
+        <FIELD NAME="cpa_activity_id"  TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="mod_cpa instance to use for this slot (0 = not yet assigned)"/>
+        <FIELD NAME="available_levels" TYPE="text"             NOTNULL="false"
+               COMMENT="JSON array of levels available e.g. [1,2,3,5]"/>
+        <FIELD NAME="coins_per_level"  TYPE="text"             NOTNULL="false"
+               COMMENT="JSON object {level: coins} e.g. {&quot;1&quot;:10,&quot;2&quot;:20}"/>
+        <FIELD NAME="available_tracks" TYPE="text"             NOTNULL="false"
+               COMMENT="JSON array of track names e.g. [&quot;Python&quot;,&quot;Java&quot;,&quot;DSA&quot;]"/>
+        <FIELD NAME="questions_per_student" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="2"
+               COMMENT="How many questions each student receives"/>
+        <FIELD NAME="mcq_questionbank_id"   TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"
+               COMMENT="Moodle question category ID for MCQ pool"/>
+        <FIELD NAME="mcq_question_count"    TYPE="int" LENGTH="4"  NOTNULL="true" DEFAULT="10"
+               COMMENT="How many questions in MCQ mode"/>
+        <FIELD NAME="status"           TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT="active"
+               COMMENT="active|cancelled|completed"/>
+        <FIELD NAME="createdby"        TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timecreated"      TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"     TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"  TYPE="primary" FIELDS="id"/>
+        <KEY NAME="windowid" TYPE="foreign" FIELDS="windowid" REFTABLE="aale_windows" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="windowid"  UNIQUE="false" FIELDS="windowid"/>
+        <INDEX NAME="teacherid" UNIQUE="false" FIELDS="teacherid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         Student bookings (one active booking per window per student)
+         FIELD NAME change: timebooked → timecreated  (matches locallib.php)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale_bookings" COMMENT="Student slot bookings">
+      <FIELDS>
+        <FIELD NAME="id"                 TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="windowid"           TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale_windows.id"/>
+        <FIELD NAME="slotid"             TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale_slots.id"/>
+        <FIELD NAME="userid"             TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="level_selected"     TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="0"
+               COMMENT="CPA mode: level the student chose (1–10); 0 for class mode"/>
+        <FIELD NAME="track_selected"     TYPE="char" LENGTH="64" NOTNULL="true"  DEFAULT=""
+               COMMENT="CPA mode: track/domain chosen e.g. Python"/>
+        <FIELD NAME="questions_assigned" TYPE="text"             NOTNULL="false"
+               COMMENT="JSON array of cpa_questions IDs assigned to this student"/>
+        <FIELD NAME="status"             TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT="booked"
+               COMMENT="booked|cancelled|attended|absent"/>
+        <FIELD NAME="timecreated"        TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"       TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"  TYPE="primary" FIELDS="id"/>
+        <KEY NAME="slotid"   TYPE="foreign" FIELDS="slotid"   REFTABLE="aale_slots"   REFFIELDS="id"/>
+        <KEY NAME="windowid" TYPE="foreign" FIELDS="windowid" REFTABLE="aale_windows" REFFIELDS="id"/>
+        <KEY NAME="userid"   TYPE="foreign" FIELDS="userid"   REFTABLE="user"         REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="slotid_userid"   UNIQUE="false" FIELDS="slotid, userid"/>
+        <INDEX NAME="windowid_userid" UNIQUE="true"  FIELDS="windowid, userid"
+               COMMENT="Enforces one booking per student per window"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         CLASS MODE — Attendance records (per session per student)
+         FIELD CHANGES:
+           timemarked  → timemodified  (matches locallib.php update_record)
+           timefrozen  → frozenat      (matches locallib.php)
+           Added: frozenby, timecreated (matches locallib.php insert_record)
+           Removed: slotid, userid (derivable via bookingid JOIN; not used in locallib)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale_attendance" COMMENT="Class-mode attendance per booking per session">
+      <FIELDS>
+        <FIELD NAME="id"             TYPE="int" LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="bookingid"      TYPE="int" LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale_bookings.id"/>
+        <FIELD NAME="session_number" TYPE="int" LENGTH="4"  NOTNULL="true"  DEFAULT="0"
+               COMMENT="Session number 1–16"/>
+        <FIELD NAME="session_label"  TYPE="char" LENGTH="8" NOTNULL="true"  DEFAULT=""
+               COMMENT="FN1, FN2, AN1, AN2"/>
+        <FIELD NAME="present"        TYPE="int" LENGTH="2"  NOTNULL="true"  DEFAULT="0"
+               COMMENT="0=absent, 1=present"/>
+        <FIELD NAME="frozen"         TYPE="int" LENGTH="2"  NOTNULL="true"  DEFAULT="0"
+               COMMENT="1=session attendance frozen by faculty"/>
+        <FIELD NAME="markedby"       TYPE="int" LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="User ID of faculty who last marked this row"/>
+        <FIELD NAME="frozenby"       TYPE="int" LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="User ID of faculty who froze this session"/>
+        <FIELD NAME="frozenat"       TYPE="int" LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Unix TS when session was frozen"/>
+        <FIELD NAME="timecreated"    TYPE="int" LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"   TYPE="int" LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"   TYPE="primary" FIELDS="id"/>
+        <KEY NAME="bookingid" TYPE="foreign" FIELDS="bookingid" REFTABLE="aale_bookings" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="bookingid_session" UNIQUE="true" FIELDS="bookingid, session_number"
+               COMMENT="One attendance record per booking per session"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         CPA MODE — Assessment outcomes per student
+         FIELD CHANGES (to match locallib.php):
+           setby             → markedby
+           admin_override_by → overrideby
+           admin_override_at → overrideat
+           admin_override_reason → notes
+           Removed: coins_awarded (handled by aale_coins ledger), email_sent,
+                    email_sent_at (handled by aale_notifications), slotid, userid
+                    (derivable via bookingid JOIN)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale_outcomes" COMMENT="CPA-mode assessment outcomes per booking">
+      <FIELDS>
+        <FIELD NAME="id"             TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="bookingid"      TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale_bookings.id"/>
+        <FIELD NAME="outcome"        TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT=""
+               COMMENT="cleared|try_again|malpractice|ignore"/>
+        <FIELD NAME="prev_outcome"   TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT=""
+               COMMENT="Previous outcome (audit trail for overrides)"/>
+        <FIELD NAME="notes"          TYPE="text"             NOTNULL="false"
+               COMMENT="Faculty notes or admin override reason"/>
+        <FIELD NAME="setat"          TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Unix TS when outcome was set/last changed"/>
+        <FIELD NAME="freezeat"       TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Unix TS when auto-freeze fires (setat + 1800)"/>
+        <FIELD NAME="markedby"       TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Faculty who set the outcome"/>
+        <FIELD NAME="frozen"         TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="0"
+               COMMENT="1 = outcome frozen (30-min window elapsed or admin froze)"/>
+        <FIELD NAME="admin_override" TYPE="int"  LENGTH="2"  NOTNULL="true"  DEFAULT="0"
+               COMMENT="1 = admin override applied"/>
+        <FIELD NAME="overrideby"     TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Admin who performed the override"/>
+        <FIELD NAME="overrideat"     TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Unix TS of admin override"/>
+        <FIELD NAME="timecreated"    TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified"   TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"   TYPE="primary" FIELDS="id"/>
+        <KEY NAME="bookingid" TYPE="foreign" FIELDS="bookingid" REFTABLE="aale_bookings" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="bookingid"   UNIQUE="true"  FIELDS="bookingid"
+               COMMENT="One outcome row per booking"/>
+        <INDEX NAME="frozen_freeze" UNIQUE="false" FIELDS="frozen, freezeat"
+               COMMENT="Scheduled task: find unfrozen outcomes past their freeze time"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         Reward coins ledger (immutable transaction log)
+         FIELD CHANGES:
+           aale_id    → aaleid    (matches locallib.php)
+           source_id  → bookingid (matches locallib.php)
+           description→ notes     (matches locallib.php)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale_coins" COMMENT="Reward coins transaction ledger (immutable)">
+      <FIELDS>
+        <FIELD NAME="id"          TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="aaleid"      TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale.id"/>
+        <FIELD NAME="userid"      TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="bookingid"   TYPE="int"  LENGTH="10" NOTNULL="false"
+               COMMENT="FK → aale_bookings.id; NULL for manual admin transactions"/>
+        <FIELD NAME="amount"      TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Positive = earned, negative = redeemed/deducted"/>
+        <FIELD NAME="balance"     TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Running balance at time of this transaction"/>
+        <FIELD NAME="txtype"      TYPE="char" LENGTH="24" NOTNULL="true"  DEFAULT=""
+               COMMENT="assessment_clear|redemption|admin_add|admin_deduct"/>
+        <FIELD NAME="notes"       TYPE="text"             NOTNULL="false"
+               COMMENT="Human-readable description of the transaction"/>
+        <FIELD NAME="createdby"   TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timecreated" TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="aaleid"  TYPE="foreign" FIELDS="aaleid"  REFTABLE="aale"          REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userid_aaleid" UNIQUE="false" FIELDS="userid, aaleid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         Question assignments (CPA mode — per student per booking)
+         FIELD CHANGES:
+           ordering → sortorder   (matches locallib.php)
+           Added: cpaid           (matches locallib.php insert)
+           Removed: userid        (derivable via bookingid JOIN)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale_qassign" COMMENT="Questions assigned to a student for a CPA booking">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="bookingid"    TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale_bookings.id"/>
+        <FIELD NAME="cpaid"        TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → cpa.id — which CPA activity owns this question"/>
+        <FIELD NAME="questionid"   TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="cpa_questions.id"/>
+        <FIELD NAME="qtype"        TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT="coding"
+               COMMENT="coding|mcq"/>
+        <FIELD NAME="sortorder"    TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="0"
+               COMMENT="Display order for this student"/>
+        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"   TYPE="primary" FIELDS="id"/>
+        <KEY NAME="bookingid" TYPE="foreign" FIELDS="bookingid" REFTABLE="aale_bookings" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="bookingid" UNIQUE="false" FIELDS="bookingid"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         Notification queue (emails pending dispatch)
+         FIELD CHANGES:
+           outcomeid → bookingid  (notifications tied to booking, not just outcome)
+           subject, body → type, extra (type=event key, extra=JSON context data)
+           Added: timemodified    (matches locallib.php update_record)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <TABLE NAME="aale_notifications" COMMENT="Pending email notification queue">
+      <FIELDS>
+        <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true"  SEQUENCE="true"/>
+        <FIELD NAME="bookingid"    TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="FK → aale_bookings.id"/>
+        <FIELD NAME="userid"       TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"
+               COMMENT="Recipient user ID"/>
+        <FIELD NAME="type"         TYPE="char" LENGTH="32" NOTNULL="true"  DEFAULT=""
+               COMMENT="booking_confirmed|outcome_frozen|reminder"/>
+        <FIELD NAME="extra"        TYPE="text"             NOTNULL="false"
+               COMMENT="JSON context data for the email template"/>
+        <FIELD NAME="status"       TYPE="char" LENGTH="16" NOTNULL="true"  DEFAULT="pending"
+               COMMENT="pending|sent|failed"/>
+        <FIELD NAME="attempts"     TYPE="int"  LENGTH="4"  NOTNULL="true"  DEFAULT="0"
+               COMMENT="Number of send attempts made"/>
+        <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timemodified" TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+        <FIELD NAME="timesent"     TYPE="int"  LENGTH="10" NOTNULL="true"  DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary"   TYPE="primary" FIELDS="id"/>
+        <KEY NAME="bookingid" TYPE="foreign" FIELDS="bookingid" REFTABLE="aale_bookings" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="status"    UNIQUE="false" FIELDS="status"/>
+        <INDEX NAME="bookingid" UNIQUE="false" FIELDS="bookingid"/>
+      </INDEXES>
+    </TABLE>
+
+  </TABLES>
+</XMLDB>

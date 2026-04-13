@@ -1,0 +1,1222 @@
+/**
+ * AALE (Attendance and Activity Learning Environment) Plugin Styles
+ *
+ * Professional CSS for the mod_aale Moodle activity plugin.
+ * Uses CSS custom properties from the classic_modern theme with fallbacks.
+ *
+ * @package    mod_aale
+ * @copyright  2026 AALE Development Team
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+/* ============================================================================
+   CSS Custom Properties (with fallbacks for classic_modern theme)
+   ============================================================================ */
+
+:root {
+    --cm-primary: #0066cc;
+    --cm-secondary: #6c757d;
+    --cm-accent: #ff8c00;
+    --cm-success: #28a745;
+    --cm-danger: #dc3545;
+    --cm-warning: #ffc107;
+    --cm-info: #17a2b8;
+    --cm-light: #f8f9fa;
+    --cm-dark: #343a40;
+    --cm-border: #dee2e6;
+    --cm-text: #212529;
+    --cm-text-light: #6c757d;
+
+    /* AALE-specific colors */
+    --aale-gold: #ffd700;
+    --aale-coin: #daa520;
+    --aale-blue: #0066cc;
+    --aale-purple: #8b4ba0;
+    --aale-green: #28a745;
+    --aale-red: #dc3545;
+    --aale-amber: #ffc107;
+    --aale-gray: #6c757d;
+    --aale-light-blue: #e7f3ff;
+
+    /* Spacing and sizing */
+    --aale-border-radius: 6px;
+    --aale-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --aale-box-shadow-hover: 0 4px 8px rgba(0, 0, 0, 0.15);
+    --aale-transition: all 0.3s ease;
+}
+
+/* ============================================================================
+   Base Styles
+   ============================================================================ */
+
+.aale-container {
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.aale-page-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--cm-text);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.aale-description {
+    color: var(--cm-text-light);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+}
+
+/* ============================================================================
+   Layer 1: Booking Window Cards
+   ============================================================================ */
+
+.aale-window-card {
+    background: white;
+    border: 1px solid var(--cm-border);
+    border-radius: var(--aale-border-radius);
+    box-shadow: var(--aale-box-shadow);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    transition: var(--aale-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.aale-window-card:hover {
+    box-shadow: var(--aale-box-shadow-hover);
+    border-color: var(--cm-primary);
+}
+
+.aale-window-card.aale-frozen {
+    opacity: 0.75;
+    background: linear-gradient(135deg, rgba(245, 245, 245, 0.8), rgba(235, 235, 235, 0.8));
+}
+
+.aale-window-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.aale-window-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--cm-text);
+    margin: 0;
+    flex: 1;
+}
+
+.aale-window-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.aale-window-dates {
+    font-size: 0.9rem;
+    color: var(--cm-text-light);
+}
+
+.aale-window-dates strong {
+    color: var(--cm-text);
+    font-weight: 600;
+}
+
+.aale-status-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    transition: var(--aale-transition);
+}
+
+.aale-status-open {
+    background-color: var(--aale-light-blue);
+    color: var(--aale-blue);
+    border: 1px solid var(--aale-blue);
+}
+
+.aale-status-open:hover {
+    background-color: var(--aale-blue);
+    color: white;
+}
+
+.aale-status-closed {
+    background-color: var(--aale-gray);
+    color: white;
+    border: 1px solid var(--aale-gray);
+}
+
+.aale-status-closing {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #ff6d00;
+    border: 1px solid #ff6d00;
+    animation: pulse-amber 2s ease-in-out infinite;
+}
+
+@keyframes pulse-amber {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+.aale-window-description {
+    color: var(--cm-text-light);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+
+.aale-window-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--cm-border);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.aale-window-slots {
+    font-size: 0.9rem;
+    color: var(--cm-text-light);
+}
+
+.aale-window-slots strong {
+    color: var(--cm-text);
+    font-weight: 600;
+}
+
+/* ============================================================================
+   Layer 2: Slot Cards
+   ============================================================================ */
+
+.aale-slot-card {
+    background: white;
+    border: 1px solid var(--cm-border);
+    border-radius: var(--aale-border-radius);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: var(--aale-transition);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.aale-slot-card:hover {
+    border-color: var(--cm-primary);
+    box-shadow: var(--aale-box-shadow);
+}
+
+.aale-slot-card.aale-frozen {
+    background-color: var(--cm-light);
+    opacity: 0.85;
+    cursor: not-allowed;
+}
+
+.aale-slot-left {
+    flex: 1;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    min-width: 0;
+}
+
+.aale-slot-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.aale-slot-time {
+    font-weight: 600;
+    color: var(--cm-text);
+    font-size: 0.95rem;
+}
+
+.aale-slot-mode-badge {
+    display: inline-block;
+    padding: 0.25rem 0.65rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+    letter-spacing: 0.5px;
+}
+
+.aale-slot-mode-class {
+    background-color: #e3f2fd;
+    color: var(--aale-blue);
+    border: 1px solid var(--aale-blue);
+}
+
+.aale-slot-mode-cpa {
+    background-color: #f3e5f5;
+    color: var(--aale-purple);
+    border: 1px solid var(--aale-purple);
+}
+
+.aale-slot-facilitator {
+    color: var(--cm-text-light);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.aale-slot-capacity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 120px;
+}
+
+.aale-capacity-bar {
+    width: 100%;
+    height: 6px;
+    background-color: var(--cm-light);
+    border-radius: 3px;
+    overflow: hidden;
+    border: 1px solid var(--cm-border);
+}
+
+.aale-capacity-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cm-primary) 0%, var(--cm-primary) 100%);
+    transition: width 0.3s ease;
+}
+
+.aale-capacity-bar-fill.aale-capacity-high {
+    background: linear-gradient(90deg, var(--aale-red) 0%, var(--aale-red) 100%);
+}
+
+.aale-capacity-bar-fill.aale-capacity-medium {
+    background: linear-gradient(90deg, var(--aale-amber) 0%, var(--aale-amber) 100%);
+}
+
+.aale-capacity-text {
+    font-size: 0.8rem;
+    color: var(--cm-text-light);
+    text-align: center;
+    font-weight: 500;
+}
+
+.aale-slot-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+/* ============================================================================
+   Booking Status Badges
+   ============================================================================ */
+
+.aale-booking-status {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: var(--aale-transition);
+}
+
+.aale-booking-status-booked {
+    background-color: #d1ecf1;
+    color: var(--aale-blue);
+    border: 1px solid var(--aale-blue);
+}
+
+.aale-booking-status-attended {
+    background-color: #d4edda;
+    color: var(--aale-green);
+    border: 1px solid var(--aale-green);
+}
+
+.aale-booking-status-absent {
+    background-color: #f8d7da;
+    color: var(--aale-red);
+    border: 1px solid var(--aale-red);
+}
+
+.aale-booking-status-cancelled {
+    background-color: #e2e3e5;
+    color: var(--aale-gray);
+    border: 1px solid var(--aale-gray);
+    text-decoration: line-through;
+}
+
+/* ============================================================================
+   Outcome Status Badges
+   ============================================================================ */
+
+.aale-outcome-badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: var(--aale-transition);
+}
+
+.aale-outcome-cleared {
+    background-color: #d4edda;
+    color: var(--aale-green);
+    border: 1px solid var(--aale-green);
+}
+
+.aale-outcome-cleared::before {
+    content: "✓ ";
+    font-weight: bold;
+}
+
+.aale-outcome-try-again {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffc107;
+}
+
+.aale-outcome-try-again::before {
+    content: "↻ ";
+    font-weight: bold;
+}
+
+.aale-outcome-malpractice {
+    background-color: #f8d7da;
+    color: var(--aale-red);
+    border: 1px solid var(--aale-red);
+}
+
+.aale-outcome-malpractice::before {
+    content: "⚠ ";
+    font-weight: bold;
+}
+
+.aale-outcome-ignore {
+    background-color: #e2e3e5;
+    color: var(--aale-gray);
+    border: 1px solid var(--aale-gray);
+}
+
+.aale-outcome-ignore::before {
+    content: "◯ ";
+    font-weight: bold;
+}
+
+.aale-outcome-pending {
+    background-color: var(--aale-light-blue);
+    color: var(--aale-blue);
+    border: 1px solid var(--aale-blue);
+    animation: pulse-pending 2s ease-in-out infinite;
+}
+
+.aale-outcome-pending::before {
+    content: "⏳ ";
+    font-weight: bold;
+}
+
+@keyframes pulse-pending {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ============================================================================
+   Session Tabs and Frozen States
+   ============================================================================ */
+
+.aale-session-tabs {
+    display: flex;
+    gap: 0.5rem;
+    border-bottom: 2px solid var(--cm-border);
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 0;
+}
+
+.aale-session-tab {
+    padding: 0.75rem 1.25rem;
+    border: none;
+    background: none;
+    color: var(--cm-text-light);
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: var(--aale-transition);
+    white-space: nowrap;
+    position: relative;
+}
+
+.aale-session-tab:hover {
+    color: var(--cm-text);
+    border-bottom-color: var(--cm-primary);
+}
+
+.aale-session-tab.active {
+    color: var(--cm-primary);
+    border-bottom-color: var(--cm-primary);
+}
+
+.aale-session-tab.frozen {
+    color: var(--aale-gray);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.aale-session-tab.frozen::after {
+    content: "🔒";
+    margin-left: 0.25rem;
+    font-size: 0.85rem;
+}
+
+/* ============================================================================
+   Frozen State Overlay
+   ============================================================================ */
+
+.aale-frozen {
+    position: relative;
+}
+
+.aale-frozen::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.aale-frozen-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    opacity: 0.3;
+    pointer-events: none;
+}
+
+/* ============================================================================
+   Countdown Timer
+   ============================================================================ */
+
+.aale-countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--cm-light);
+    border: 1px solid var(--cm-border);
+    border-radius: var(--aale-border-radius);
+    font-weight: 600;
+    color: var(--cm-text);
+    font-size: 0.9rem;
+}
+
+.aale-countdown-icon {
+    font-size: 1.2rem;
+}
+
+.aale-countdown-time {
+    font-family: 'Courier New', monospace;
+    min-width: 60px;
+}
+
+.aale-countdown-critical {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: var(--aale-red);
+    color: var(--aale-red);
+    animation: flash-red 1s ease-in-out infinite;
+}
+
+@keyframes flash-red {
+    0%, 100% { background-color: rgba(220, 53, 69, 0.1); }
+    50% { background-color: rgba(220, 53, 69, 0.25); }
+}
+
+/* ============================================================================
+   Coin Balance and Transactions
+   ============================================================================ */
+
+.aale-coin-balance {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(218, 165, 32, 0.1));
+    border: 2px solid var(--aale-gold);
+    border-radius: var(--aale-border-radius);
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.aale-coin-icon {
+    font-size: 1.5rem;
+}
+
+.aale-coin-amount {
+    color: var(--aale-coin);
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+}
+
+.aale-coin-label {
+    color: var(--cm-text-light);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.aale-coin-transactions {
+    margin-top: 1.5rem;
+}
+
+.aale-transaction-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    transition: var(--aale-transition);
+}
+
+.aale-transaction-row:hover {
+    background-color: var(--cm-light);
+}
+
+.aale-coin-earned {
+    background-color: rgba(40, 167, 69, 0.05);
+    border-left: 3px solid var(--aale-green);
+}
+
+.aale-coin-earned .aale-coin-amount {
+    color: var(--aale-green);
+    font-weight: 700;
+}
+
+.aale-coin-redeemed {
+    background-color: rgba(255, 193, 7, 0.05);
+    border-left: 3px solid var(--aale-amber);
+}
+
+.aale-coin-redeemed .aale-coin-amount {
+    color: var(--aale-amber);
+    font-weight: 700;
+}
+
+.aale-transaction-description {
+    flex: 1;
+    color: var(--cm-text);
+    font-weight: 500;
+}
+
+.aale-transaction-date {
+    color: var(--cm-text-light);
+    font-size: 0.85rem;
+    min-width: 100px;
+    text-align: right;
+}
+
+/* ============================================================================
+   Summary Cards (Dashboard)
+   ============================================================================ */
+
+.aale-summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.aale-summary-card {
+    background: white;
+    border: 1px solid var(--cm-border);
+    border-radius: var(--aale-border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--aale-box-shadow);
+    transition: var(--aale-transition);
+    position: relative;
+    overflow: hidden;
+}
+
+.aale-summary-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--cm-primary), var(--cm-accent));
+}
+
+.aale-summary-card:hover {
+    box-shadow: var(--aale-box-shadow-hover);
+    transform: translateY(-2px);
+}
+
+.aale-summary-card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.aale-summary-card-label {
+    color: var(--cm-text-light);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.aale-summary-card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--cm-text);
+    font-family: 'Courier New', monospace;
+}
+
+.aale-summary-card-subtitle {
+    color: var(--cm-text-light);
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+/* ============================================================================
+   Forms and Inputs
+   ============================================================================ */
+
+.aale-form-group {
+    margin-bottom: 1.25rem;
+}
+
+.aale-form-label {
+    display: block;
+    color: var(--cm-text);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.aale-form-label.required::after {
+    content: " *";
+    color: var(--aale-red);
+}
+
+.aale-form-control {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--cm-border);
+    border-radius: 4px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: var(--aale-transition);
+    background-color: white;
+    color: var(--cm-text);
+}
+
+.aale-form-control:focus {
+    outline: none;
+    border-color: var(--cm-primary);
+    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.aale-form-control:disabled {
+    background-color: var(--cm-light);
+    color: var(--cm-text-light);
+    cursor: not-allowed;
+}
+
+.aale-form-help {
+    display: block;
+    color: var(--cm-text-light);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+/* ============================================================================
+   Buttons
+   ============================================================================ */
+
+.aale-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--aale-transition);
+    text-decoration: none;
+    white-space: nowrap;
+    justify-content: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.aale-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.aale-btn:active {
+    transform: translateY(0);
+}
+
+.aale-btn-primary {
+    background-color: var(--cm-primary);
+    color: white;
+    border: 1px solid var(--cm-primary);
+}
+
+.aale-btn-primary:hover {
+    background-color: #0052a3;
+    border-color: #0052a3;
+}
+
+.aale-btn-primary:disabled {
+    background-color: var(--cm-secondary);
+    border-color: var(--cm-secondary);
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+}
+
+.aale-btn-secondary {
+    background-color: var(--cm-secondary);
+    color: white;
+    border: 1px solid var(--cm-secondary);
+}
+
+.aale-btn-secondary:hover {
+    background-color: #5a6268;
+    border-color: #5a6268;
+}
+
+.aale-btn-success {
+    background-color: var(--aale-green);
+    color: white;
+    border: 1px solid var(--aale-green);
+}
+
+.aale-btn-success:hover {
+    background-color: #218838;
+    border-color: #218838;
+}
+
+.aale-btn-danger {
+    background-color: var(--aale-red);
+    color: white;
+    border: 1px solid var(--aale-red);
+}
+
+.aale-btn-danger:hover {
+    background-color: #c82333;
+    border-color: #c82333;
+}
+
+.aale-btn-outline {
+    background-color: white;
+    color: var(--cm-primary);
+    border: 2px solid var(--cm-primary);
+}
+
+.aale-btn-outline:hover {
+    background-color: var(--cm-primary);
+    color: white;
+}
+
+.aale-btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+.aale-btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
+/* ============================================================================
+   Alerts and Messages
+   ============================================================================ */
+
+.aale-alert {
+    padding: 1rem;
+    border-radius: var(--aale-border-radius);
+    margin-bottom: 1rem;
+    border-left: 4px solid transparent;
+}
+
+.aale-alert-info {
+    background-color: #e7f3ff;
+    color: var(--aale-blue);
+    border-left-color: var(--aale-blue);
+}
+
+.aale-alert-success {
+    background-color: #d4edda;
+    color: var(--aale-green);
+    border-left-color: var(--aale-green);
+}
+
+.aale-alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border-left-color: var(--aale-amber);
+}
+
+.aale-alert-danger {
+    background-color: #f8d7da;
+    color: var(--aale-red);
+    border-left-color: var(--aale-red);
+}
+
+/* ============================================================================
+   Tables
+   ============================================================================ */
+
+.aale-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--aale-box-shadow);
+    border-radius: var(--aale-border-radius);
+    overflow: hidden;
+}
+
+.aale-table thead {
+    background-color: var(--cm-light);
+    border-bottom: 2px solid var(--cm-border);
+}
+
+.aale-table thead th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--cm-text);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.aale-table tbody td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--cm-border);
+    color: var(--cm-text);
+    font-size: 0.9rem;
+}
+
+.aale-table tbody tr:hover {
+    background-color: var(--cm-light);
+}
+
+.aale-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ============================================================================
+   Responsive Design
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .aale-window-card {
+        padding: 1rem;
+    }
+
+    .aale-window-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .aale-window-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .aale-slot-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .aale-slot-left {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .aale-slot-capacity {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        min-width: unset;
+    }
+
+    .aale-capacity-bar {
+        flex: 1;
+    }
+
+    .aale-slot-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .aale-summary-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .aale-session-tabs {
+        flex-wrap: wrap;
+    }
+
+    .aale-session-tab {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .aale-btn-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .aale-btn {
+        width: 100%;
+    }
+
+    .aale-table {
+        font-size: 0.85rem;
+    }
+
+    .aale-table thead th,
+    .aale-table tbody td {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .aale-container {
+        padding: 0.75rem;
+    }
+
+    .aale-window-card {
+        padding: 0.75rem;
+    }
+
+    .aale-page-title {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .aale-window-title {
+        font-size: 1rem;
+    }
+
+    .aale-slot-time {
+        font-size: 0.85rem;
+    }
+
+    .aale-coin-balance {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .aale-summary-card-value {
+        font-size: 1.5rem;
+    }
+
+    .aale-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* ============================================================================
+   Dark Mode Support
+   ============================================================================ */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --cm-light: #2d2d2d;
+        --cm-dark: #f8f9fa;
+        --cm-text: #e0e0e0;
+        --cm-text-light: #9e9e9e;
+        --cm-border: #3a3a3a;
+    }
+
+    .aale-window-card {
+        background: #1e1e1e;
+        border-color: var(--cm-border);
+    }
+
+    .aale-window-card.aale-frozen {
+        background: linear-gradient(135deg, rgba(60, 60, 60, 0.8), rgba(40, 40, 40, 0.8));
+    }
+
+    .aale-slot-card {
+        background: #1e1e1e;
+    }
+
+    .aale-slot-card.aale-frozen {
+        background-color: var(--cm-light);
+    }
+
+    .aale-summary-card {
+        background: #1e1e1e;
+    }
+
+    .aale-form-control {
+        background-color: #2d2d2d;
+        color: var(--cm-text);
+        border-color: var(--cm-border);
+    }
+
+    .aale-form-control:focus {
+        box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2);
+    }
+
+    .aale-table thead {
+        background-color: var(--cm-light);
+    }
+
+    .aale-table tbody tr:hover {
+        background-color: var(--cm-light);
+    }
+
+    .aale-alert-info {
+        background-color: rgba(0, 102, 204, 0.2);
+    }
+
+    .aale-alert-success {
+        background-color: rgba(40, 167, 69, 0.2);
+    }
+
+    .aale-alert-warning {
+        background-color: rgba(255, 193, 7, 0.2);
+    }
+
+    .aale-alert-danger {
+        background-color: rgba(220, 53, 69, 0.2);
+    }
+}
+
+/* ============================================================================
+   Print Styles
+   ============================================================================ */
+
+@media print {
+    .aale-btn,
+    .aale-session-tabs,
+    .aale-slot-actions {
+        display: none;
+    }
+
+    .aale-window-card,
+    .aale-summary-card {
+        box-shadow: none;
+        border: 1px solid #000;
+        page-break-inside: avoid;
+    }
+
+    .aale-countdown-critical {
+        animation: none;
+    }
+}
+
+/* ============================================================================
+   Utilities
+   ============================================================================ */
+
+.aale-text-center {
+    text-align: center;
+}
+
+.aale-text-right {
+    text-align: right;
+}
+
+.aale-text-muted {
+    color: var(--cm-text-light);
+}
+
+.aale-mt-1 { margin-top: 0.5rem; }
+.aale-mt-2 { margin-top: 1rem; }
+.aale-mt-3 { margin-top: 1.5rem; }
+.aale-mb-1 { margin-bottom: 0.5rem; }
+.aale-mb-2 { margin-bottom: 1rem; }
+.aale-mb-3 { margin-bottom: 1.5rem; }
+
+.aale-p-1 { padding: 0.5rem; }
+.aale-p-2 { padding: 1rem; }
+.aale-p-3 { padding: 1.5rem; }
+
+.aale-gap-1 { gap: 0.5rem; }
+.aale-gap-2 { gap: 1rem; }
+.aale-gap-3 { gap: 1.5rem; }
+
+.aale-w-100 { width: 100%; }
+.aale-max-width { max-width: 1200px; }
+
+.aale-hidden {
+    display: none;
+}
+
+.aale-invisible {
+    visibility: hidden;
+}
+
+.aale-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aale-flex {
+    display: flex;
+}
+
+.aale-flex-column {
+    flex-direction: column;
+}
+
+.aale-flex-wrap {
+    flex-wrap: wrap;
+}
+
+.aale-justify-between {
+    justify-content: space-between;
+}
+
+.aale-align-center {
+    align-items: center;
+}
+
+.aale-rounded {
+    border-radius: var(--aale-border-radius);
+}
+
+.aale-shadow {
+    box-shadow: var(--aale-box-shadow);
+}
+
+.aale-shadow-lg {
+    box-shadow: var(--aale-box-shadow-hover);
+}

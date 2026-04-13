@@ -90,6 +90,9 @@
         <FIELD NAME="difficulty"     TYPE="char" LENGTH="12" NOTNULL="true" DEFAULT="medium"
                COMMENT="easy|medium|hard|expert"/>
         <FIELD NAME="tags"           TYPE="text"             NOTNULL="false" COMMENT="Comma-separated tags"/>
+        <FIELD NAME="track"          TYPE="char" LENGTH="100" NOTNULL="true" DEFAULT=""  COMMENT="Subject/domain track e.g. python, java, dsa — used by AALE for question pool filtering"/>
+        <FIELD NAME="level"          TYPE="int"  LENGTH="4"  NOTNULL="true" DEFAULT="0"  COMMENT="Difficulty level 1-10 for AALE CPA orchestration; 0 = unassigned"/>
+        <FIELD NAME="qtype"          TYPE="char" LENGTH="16" NOTNULL="true" DEFAULT="coding" COMMENT="Alias: coding|mcq — used by AALE question assignment"/>
         <FIELD NAME="ordering"       TYPE="int"  LENGTH="6"  NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timecreated"    TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>
         <FIELD NAME="timemodified"   TYPE="int"  LENGTH="10" NOTNULL="true" DEFAULT="0"/>

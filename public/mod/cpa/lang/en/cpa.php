@@ -17,11 +17,12 @@
 defined('MOODLE_INTERNAL') || die();
 
 // ── Plugin metadata ──────────────────────────────────────────────────────────
-$string['modulename']              = 'Coding & Programming Assessment';
-$string['modulenameplural']        = 'Coding & Programming Assessments';
-$string['modulename_help']         = 'The CPA activity lets teachers create proctored programming and MCQ assessments with real-time violation monitoring, sandboxed code execution, and deep Moodle gradebook integration.';
-$string['pluginname']              = 'Coding & Programming Assessment (CPA)';
+$string['modulename']              = 'CPA';
+$string['modulenameplural']        = 'CPAs';
+$string['modulename_help']         = 'CPA (Coding & Programming Assessment) lets teachers create proctored programming and MCQ assessments with real-time violation monitoring, sandboxed code execution, and deep Moodle gradebook integration.';
+$string['pluginname']              = 'CPA';
 $string['pluginadministration']    = 'CPA administration';
+$string['plugindescription']       = 'Coding & Programming Assessment';
 $string['cpa:addinstance']         = 'Add a new CPA assessment';
 $string['cpa:view']                = 'View CPA assessment';
 $string['cpa:attempt']             = 'Attempt CPA assessment';

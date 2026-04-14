@@ -78,13 +78,16 @@ function xmldb_aale_upgrade($oldversion) {
         $field_aaleid = new xmldb_field('aaleid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'id');
         if (!$dbman->field_exists($slotstable, $field_aaleid)) {
             $dbman->add_field($slotstable, $field_aaleid);
-            // Migrate windowid → aaleid via aale_windows join.
-            $DB->execute("
-                UPDATE {aale_slots} s
-                JOIN   {aale_windows} w ON w.id = s.windowid
-                SET    s.aaleid = w.aaleid
-                WHERE  s.aaleid = 0
-            ");
+            // Migrate windowid → aaleid via PHP (DB-agnostic; avoids MySQL-only JOIN UPDATE).
+            if ($dbman->table_exists(new xmldb_table('aale_windows'))) {
+                $slots_to_migrate = $DB->get_records_select('aale_slots', 'aaleid = ?', [0], '', 'id, windowid');
+                foreach ($slots_to_migrate as $s) {
+                    $window = $DB->get_record('aale_windows', ['id' => $s->windowid], 'aaleid', IGNORE_MISSING);
+                    if ($window) {
+                        $DB->set_field('aale_slots', 'aaleid', $window->aaleid, ['id' => $s->id]);
+                    }
+                }
+            }
         }
 
         // Add show_faculty_to_students.
@@ -100,8 +103,12 @@ function xmldb_aale_upgrade($oldversion) {
             $field_cdtmp = new xmldb_field('classdate_str', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '', 'classdate');
             if (!$dbman->field_exists($slotstable, $field_cdtmp)) {
                 $dbman->add_field($slotstable, $field_cdtmp);
-                // Populate: format unix timestamp → display string.
-                $DB->execute("UPDATE {aale_slots} SET classdate_str = FROM_UNIXTIME(classdate, '%d %b %Y') WHERE classdate > 0");
+                // Populate: format unix timestamp → display string (DB-agnostic, no FROM_UNIXTIME).
+                $rows = $DB->get_records_select('aale_slots', 'classdate > 0', [], '', 'id, classdate');
+                foreach ($rows as $row) {
+                    $display = date('d M Y', (int)$row->classdate);
+                    $DB->set_field('aale_slots', 'classdate_str', $display, ['id' => $row->id]);
+                }
                 // Drop old int field, rename new one.
                 $dbman->drop_field($slotstable, new xmldb_field('classdate'));
                 $field_cd = new xmldb_field('classdate', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '', 'classdate_str');
@@ -114,18 +121,17 @@ function xmldb_aale_upgrade($oldversion) {
         $field_ct = new xmldb_field('classtime', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '', 'classdate');
         if (!$dbman->field_exists($slotstable, $field_ct)) {
             $dbman->add_field($slotstable, $field_ct);
-            // Populate from old timestart / timeend integers.
-            $DB->execute("
-                UPDATE {aale_slots}
-                SET    classtime = CONCAT(
-                           LPAD(FLOOR(timestart/60),2,'0'), ':',
-                           LPAD(MOD(timestart,60),2,'0'),
-                           ' – ',
-                           LPAD(FLOOR(timeend/60),2,'0'), ':',
-                           LPAD(MOD(timeend,60),2,'0')
-                       )
-                WHERE  classtime = ''
-            ");
+            // Populate from old timestart / timeend integers (DB-agnostic; avoids
+            // LPAD(FLOOR(double precision)) which fails on PostgreSQL without casts).
+            $rows = $DB->get_records_select('aale_slots', "classtime = ''", [], '', 'id, timestart, timeend');
+            foreach ($rows as $row) {
+                $ts = (int)($row->timestart ?? 0);
+                $te = (int)($row->timeend   ?? 0);
+                $display = sprintf('%02d:%02d – %02d:%02d',
+                    intdiv($ts, 60), $ts % 60,
+                    intdiv($te, 60), $te % 60);
+                $DB->set_field('aale_slots', 'classtime', $display, ['id' => $row->id]);
+            }
         }
 
         // totalslots (replaces maxstudents).
@@ -169,13 +175,16 @@ function xmldb_aale_upgrade($oldversion) {
             $field_aaleid_bk = new xmldb_field('aaleid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'id');
             if (!$dbman->field_exists($bktable, $field_aaleid_bk)) {
                 $dbman->add_field($bktable, $field_aaleid_bk);
-                // Migrate windowid → aaleid.
-                $DB->execute("
-                    UPDATE {aale_bookings} b
-                    JOIN   {aale_windows} w ON w.id = b.windowid
-                    SET    b.aaleid = w.aaleid
-                    WHERE  b.aaleid = 0
-                ");
+                // Migrate windowid → aaleid via PHP (DB-agnostic).
+                if ($dbman->table_exists(new xmldb_table('aale_windows'))) {
+                    $bks = $DB->get_records_select('aale_bookings', 'aaleid = ?', [0], '', 'id, windowid');
+                    foreach ($bks as $bk) {
+                        $window = $DB->get_record('aale_windows', ['id' => $bk->windowid], 'aaleid', IGNORE_MISSING);
+                        if ($window) {
+                            $DB->set_field('aale_bookings', 'aaleid', $window->aaleid, ['id' => $bk->id]);
+                        }
+                    }
+                }
             }
         }
 

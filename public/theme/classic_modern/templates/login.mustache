@@ -15,140 +15,192 @@
 
     <style>
         :root {
-            --primary: #1a1a1a;
-            --accent: #2563eb;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
+            --primary: #0f172a;
+            --accent: {{brandcolor}};
+            --bg-light: #f8fafc;
             --text-main: #1e293b;
             --text-muted: #64748b;
             --border: #e2e8f0;
-            --input-bg: #ffffff;
+            --input-bg: #f8fafc;
+            --radius: 12px;
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-light);
             color: var(--text-main);
             margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
+            padding: 0;
             -webkit-font-smoothing: antialiased;
         }
 
-        .login-container {
+        .login-page-wrapper {
+            display: flex;
+            min-height: 100vh;
             width: 100%;
-            max-width: 400px;
-            padding: 2rem;
-            animation: fadeIn 0.6s ease-out;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Left Panel - Branding */
+        .login-branding {
+            flex: 1.2;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 6rem;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (max-width: 900px) {
+            .login-branding {
+                display: none;
+            }
+        }
+
+        .login-branding::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 30%, rgba(37, 99, 235, 0.2) 0%, transparent 70%),
+                        radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .branding-content {
+            position: relative;
+            z-index: 10;
+        }
+
+        .branding-logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .branding-tagline {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            max-width: 400px;
+            line-height: 1.6;
+            font-weight: 400;
+        }
+
+        /* Right Panel - Form */
+        .login-form-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            padding: 2rem;
         }
 
         .login-card {
-            background: var(--card-bg);
-            padding: 2.5rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 5px 10px rgba(0, 0, 0, 0.03);
-            text-align: center;
+            width: 100%;
+            max-width: 480px;
+            padding: 1rem;
+            animation: fadeIn 0.8s ease-out;
         }
 
-        .login-logo {
-            max-width: 180px;
-            height: auto;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .card-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .card-header .login-logo {
+            max-height: 60px;
+            width: auto;
             margin-bottom: 1.5rem;
         }
 
-        .site-name {
-            font-size: 1.5rem;
+        .card-header h2 {
+            font-size: 1.875rem;
             font-weight: 700;
-            letter-spacing: -0.02em;
-            margin-bottom: 2rem;
             color: var(--primary);
+            margin: 0;
+            letter-spacing: -0.02em;
         }
 
-        /* Hide all text except essentials as per user request */
-        #loginform .forgetpass,
-        #loginform .signup,
-        #loginform .login-instructions,
-        .login-divider,
-        .login-identityprovider,
-        .login-guest,
-        .login-signup,
-        .login-footer-links {
-            display: none !important;
+        .card-header p {
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-size: 0.95rem;
         }
 
         /* Moodle Form Overrides */
+        #loginform {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
         .form-control {
             border: 1.5px solid var(--border) !important;
-            border-radius: 12px !important;
-            padding: 0.75rem 1rem !important;
+            border-radius: var(--radius) !important;
+            padding: 0.875rem 1.125rem !important;
             background-color: var(--input-bg) !important;
-            font-size: 0.95rem !important;
+            font-size: 1rem !important;
             transition: all 0.2s ease !important;
             height: auto !important;
-            margin-bottom: 1rem !important;
+            margin-bottom: 0 !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }
 
         .form-control:focus {
             border-color: var(--accent) !important;
+            background-color: white !important;
             box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1) !important;
             outline: none !important;
         }
 
         label {
             display: block;
-            text-align: left;
-            font-size: 0.85rem;
+            font-size: 0.875rem;
             font-weight: 600;
-            color: var(--text-muted);
+            color: var(--text-main);
             margin-bottom: 0.5rem;
-            margin-left: 2px;
         }
 
         .btn-primary, input[type="submit"] {
             width: 100% !important;
             background: var(--primary) !important;
             border: none !important;
-            border-radius: 12px !important;
-            padding: 0.8rem !important;
+            border-radius: var(--radius) !important;
+            padding: 1rem !important;
             font-weight: 700 !important;
             font-size: 1rem !important;
             color: white !important;
             cursor: pointer !important;
-            transition: all 0.2s ease !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
             margin-top: 1rem !important;
         }
 
         .btn-primary:hover, input[type="submit"]:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             background: #000 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
-        /* Specific for Moodle structure */
-        .loginform {
-            text-align: left;
-        }
-
-        #login_username_label, #login_password_label {
-            display: block !important;
-        }
-
-        .login-box {
-            margin-top: 0 !important;
-        }
-
+        /* Errors and Alerts */
         .alert {
-            border-radius: 12px !important;
+            border-radius: var(--radius) !important;
+            padding: 1rem !important;
+            font-size: 0.9rem !important;
             margin-bottom: 1.5rem !important;
-            font-size: 0.85rem !important;
             border: none !important;
+            display: flex;
+            align-items: center;
         }
 
         .alert-danger {
@@ -156,15 +208,16 @@
             color: #991b1b !important;
         }
 
-        .alert-success {
-            background-color: #dcfce7 !important;
-            color: #166534 !important;
+        /* Hide noise */
+        .login-instructions, .login-divider, .login-identityprovider, 
+        .login-guest, .login-signup, .login-footer-links, .forgetpass, .signup {
+            display: none !important;
         }
 
-        /* Remove potential language menu unless explicitly needed, 
-           but user said avoid ALL other text */
         .langmenu {
-            display: none !important;
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
         }
     </style>
 
@@ -174,16 +227,27 @@
 <body {{{ bodyattributes }}}>
 {{{ output.standard_top_of_body_html }}}
 
-<div class="login-container">
-    <div class="login-card">
-        {{#logourl}}
-            <img src="{{{ logourl }}}" alt="{{sitename}}" class="login-logo">
-        {{/logourl}}
-        
-        <div class="site-name">{{sitename}}</div>
+<div class="login-page-wrapper">
+    <div class="login-branding">
+        <div class="branding-content">
+            <div class="branding-logo">R-ACTIVE</div>
+            <p class="branding-tagline">Experience a new standard of learning with the India's first industry-integrated LMS.</p>
+        </div>
+    </div>
+    
+    <div class="login-form-area">
+        <div class="login-card">
+            <div class="card-header">
+                {{#logourl}}
+                    <img src="{{{ logourl }}}" alt="{{sitename}}" class="login-logo">
+                {{/logourl}}
+                <h2>Welcome back</h2>
+                <p>Please enter your details to sign in.</p>
+            </div>
 
-        <div class="login-form-wrapper">
-            {{{ output.main_content }}}
+            <div class="login-form-wrapper">
+                {{{ output.main_content }}}
+            </div>
         </div>
     </div>
 </div>
@@ -192,17 +256,18 @@
 {{{ output.standard_end_of_body_html }}}
 
 <script>
-    // Ensure labels are visible if Moodle hides them
     document.addEventListener('DOMContentLoaded', function() {
         const usernameLabel = document.querySelector('label[for="username"]');
         const passwordLabel = document.querySelector('label[for="password"]');
-        if (usernameLabel) usernameLabel.innerText = 'Username';
+        if (usernameLabel) usernameLabel.innerText = 'Username or Email';
         if (passwordLabel) passwordLabel.innerText = 'Password';
         
         const loginBtn = document.querySelector('#loginbtn');
-        if (loginBtn) loginBtn.innerText = 'Login';
+        if (loginBtn) loginBtn.innerText = 'Sign In';
+        
+        // Remove 'Remember username' check if you want it cleaner, 
+        // but it's usually better to keep for functionality.
     });
 </script>
-
 </body>
 </html>

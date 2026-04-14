@@ -38,6 +38,7 @@ if (method_exists($OUTPUT, 'get_login_logo_url')) {
 $templatecontext = [
     'sitename'       => 'R-ACTIVE', // User specifically requested this name
     'logourl'        => $logourl,
+    'brandcolor'     => $PAGE->theme->settings->brandcolor ?? '#2563eb',
     'output'         => $OUTPUT,
     'bodyattributes' => $OUTPUT->body_attributes(),
     'langmenu'       => $primarymenu['lang'],

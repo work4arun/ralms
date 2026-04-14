@@ -5,161 +5,330 @@
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Student slot booking page.
+ *
+ * Shows all active slots for the activity.
+ * For each slot:
+ *   - Faculty name (hidden for CPA where show_faculty_to_students = 0)
+ *   - Date, time, venue (stored as display strings)
+ *   - Total slots
+ *   - Remaining slots (real-time — race-condition safe via DB transaction)
+ *
+ * Booking rules:
+ *   - One booking per student per slot (unique index enforced in DB)
+ *   - If slot is full → "No slots available" / button disabled
+ *   - CPA: student must select Level before booking
+ *
+ * @package    mod_aale
+ * @copyright  2026 AALE Contributors
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 require_once(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/locallib.php');
 
-// Get parameters
 $id = required_param('id', PARAM_INT);
 
-// Get course module
-$cm = get_coursemodule_from_id('aale', $id, 0, false, MUST_EXIST);
-$course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
-$aale = $DB->get_record('aale', array('id' => $cm->instance), '*', MUST_EXIST);
+$cm     = get_coursemodule_from_id('aale', $id, 0, false, MUST_EXIST);
+$course = $DB->get_record('course', ['id' => $cm->course],   '*', MUST_EXIST);
+$aale   = $DB->get_record('aale',   ['id' => $cm->instance], '*', MUST_EXIST);
 
-// Setup page
 require_login($course, true, $cm);
 $context = context_module::instance($cm->id);
 require_capability('mod/aale:bookslot', $context);
 
-$PAGE->set_url('/mod/aale/booking.php', array('id' => $id));
-$PAGE->set_title(format_string($aale->name) . ' - ' . get_string('bookslot', 'mod_aale'));
+$PAGE->set_url('/mod/aale/booking.php', ['id' => $id]);
+$PAGE->set_title(format_string($aale->name) . ' – ' . get_string('bookslot', 'mod_aale'));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($context);
 
-// Handle POST actions
-$message = '';
+// ── Check booking window ───────────────────────────────────────────────────────
+$now = time();
+$booking_open  = (int)$aale->bookingopen;
+$booking_close = (int)$aale->bookingclose;
+
+$window_active = ($booking_open > 0 && $booking_close > 0
+                  && $now >= $booking_open && $now <= $booking_close);
+
+// ── Check student restriction ─────────────────────────────────────────────────
+$can_book = $window_active;
+
+if ($window_active && $aale->restrict_type !== 'all') {
+    if ($aale->restrict_type === 'groups') {
+        $allowed_groups = json_decode($aale->restrict_groups ?? '[]', true);
+        $student_groups = array_keys(groups_get_user_groups($course->id, $USER->id)[0] ?? []);
+        if (!array_intersect($allowed_groups, $student_groups)) {
+            $can_book = false;
+        }
+    } elseif ($aale->restrict_type === 'individuals') {
+        $allowed_users = json_decode($aale->restrict_users ?? '[]', true);
+        if (!in_array($USER->id, $allowed_users)) {
+            $can_book = false;
+        }
+    }
+}
+
+// ── Handle POST: book or cancel ───────────────────────────────────────────────
+$message     = '';
 $messagetype = 'info';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_sesskey();
+    $action = optional_param('action', '', PARAM_ALPHA);
 
-    if (isset($_POST['action']) && $_POST['action'] === 'cancel') {
+    if ($action === 'cancel') {
         $bookingid = required_param('bookingid', PARAM_INT);
         try {
-            aale_cancel_booking($bookingid);
-            $message = get_string('bookingcancelled', 'mod_aale');
+            aale_cancel_booking($bookingid, $USER->id, $aale);
+            $message     = get_string('bookingcancelled', 'mod_aale');
             $messagetype = 'success';
         } catch (Exception $e) {
-            $message = $e->getMessage();
+            $message     = $e->getMessage();
             $messagetype = 'danger';
         }
-    } else {
-        $windowid = required_param('windowid', PARAM_INT);
-        $slotid = required_param('slotid', PARAM_INT);
-        $levelselected = optional_param('level_selected', 0, PARAM_INT);
-        $trackselected = optional_param('track_selected', '', PARAM_TEXT);
 
-        try {
-            aale_book_slot($windowid, $slotid, $USER->id, $levelselected, $trackselected);
-            $message = get_string('bookingconfirmed', 'mod_aale');
-            $messagetype = 'success';
-        } catch (Exception $e) {
-            $message = $e->getMessage();
+    } elseif ($action === 'book') {
+        if (!$can_book) {
+            $message     = get_string('bookingclosed', 'mod_aale');
             $messagetype = 'danger';
+        } else {
+            $slotid        = required_param('slotid',        PARAM_INT);
+            $levelselected = optional_param('level_selected', 0, PARAM_INT);
+            $trackselected = optional_param('track_selected', '', PARAM_TEXT);
+
+            try {
+                aale_book_slot($aale->id, $slotid, $USER->id, $levelselected, $trackselected);
+                $message     = get_string('bookingconfirmed', 'mod_aale');
+                $messagetype = 'success';
+            } catch (Exception $e) {
+                $message     = $e->getMessage();
+                $messagetype = 'danger';
+            }
         }
     }
 }
 
-// Get open booking windows
-$windows = aale_get_windows($aale->id, AALE_WINDOW_STATUS_OPEN);
-
+// ── Render ────────────────────────────────────────────────────────────────────
 echo $OUTPUT->header();
+echo $OUTPUT->heading(format_string($aale->name), 2);
 
 if (!empty($message)) {
-    echo $OUTPUT->notification($message, $messagetype);
+    echo $OUTPUT->notification($message, 'alert-' . $messagetype);
 }
 
-foreach ($windows as $window) {
-    if (!aale_window_is_bookable($window)) {
-        continue;
+// Booking window status banner.
+if ($booking_open > 0 && $booking_close > 0) {
+    if ($now < $booking_open) {
+        echo $OUTPUT->notification(
+            get_string('bookingnotopen', 'mod_aale') . ' ' .
+            userdate($booking_open, get_string('strftimedatetimeshort', 'langconfig')),
+            'info'
+        );
+    } elseif ($now > $booking_close) {
+        echo $OUTPUT->notification(get_string('bookingclosed', 'mod_aale'), 'warning');
     }
+}
 
-    echo html_writer::start_div('card mb-4 border-primary');
-    echo html_writer::div(html_writer::tag('h5', format_string($window->name), array('class' => 'mb-0')), 'card-header bg-primary text-white');
-    echo html_writer::start_div('card-body');
+if (!$can_book && $window_active) {
+    echo $OUTPUT->notification(get_string('error_noaccess', 'mod_aale'), 'error');
+    echo $OUTPUT->footer();
+    exit;
+}
 
-    // Check existing booking in this window
-    $existing = aale_get_booking_in_window($window->id, $USER->id);
-    if ($existing) {
-        $slot = aale_get_slot($existing->slotid);
-        $teacher = $DB->get_record('user', array('id' => $slot->teacherid));
-        
-        echo html_writer::start_div('alert alert-info');
-        echo html_writer::tag('p', html_writer::tag('strong', get_string('alreadybooked', 'mod_aale')));
-        echo html_writer::tag('p', get_string('teacher', 'mod_aale') . ': ' . fullname($teacher));
-        echo html_writer::tag('p', get_string('venue', 'mod_aale') . ': ' . format_string($slot->venue));
-        echo html_writer::tag('p', get_string('date', 'mod_aale') . ': ' . userdate($slot->classdate, get_string('strftimedate', 'langconfig')));
-        
-        $cancel_btn = html_writer::start_tag('form', array('method' => 'POST', 'class' => 'mt-2'));
-        $cancel_btn .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()));
-        $cancel_btn .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'action', 'value' => 'cancel'));
-        $cancel_btn .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'bookingid', 'value' => $existing->id));
-        $cancel_btn .= html_writer::tag('button', get_string('cancelbooking', 'mod_aale'), array('type' => 'submit', 'class' => 'btn btn-danger btn-sm'));
-        $cancel_btn .= html_writer::end_tag('form');
-        echo $cancel_btn;
-        echo html_writer::end_div();
+// ── Slot list ─────────────────────────────────────────────────────────────────
+$slots = $DB->get_records('aale_slots', ['aaleid' => $aale->id, 'status' => 'active'],
+                           'slotmode ASC, classdate ASC');
+
+if (empty($slots)) {
+    echo $OUTPUT->notification(get_string('noslotsfound', 'mod_aale'), 'info');
+    echo $OUTPUT->footer();
+    exit;
+}
+
+// Check if the student already has a booking for each slot.
+$existingbookings = [];
+$mybookings = $DB->get_records('aale_bookings', ['aaleid' => $aale->id, 'userid' => $USER->id]);
+foreach ($mybookings as $bk) {
+    if ($bk->status !== 'cancelled') {
+        $existingbookings[$bk->slotid] = $bk;
+    }
+}
+
+// Group slots by mode for display.
+$class_slots = [];
+$cpa_slots   = [];
+foreach ($slots as $s) {
+    if ($s->slotmode === 'class') {
+        $class_slots[] = $s;
     } else {
-        $slots = aale_get_slots($window->id);
-        if (empty($slots)) {
-            echo html_writer::tag('p', get_string('noslots', 'mod_aale'), array('class' => 'text-muted'));
-        } else {
-            $table = new html_table();
-            $table->head = array(
-                get_string('mode', 'mod_aale'),
-                get_string('teacher', 'mod_aale'),
-                get_string('venue', 'mod_aale'),
-                get_string('datetime', 'mod_aale'),
-                get_string('seatsremaining', 'mod_aale'),
-                get_string('action', 'mod_aale')
-            );
-            $table->attributes = array('class' => 'table table-hover');
+        $cpa_slots[] = $s;
+    }
+}
 
-            foreach ($slots as $slot) {
-                $teacher = $DB->get_record('user', array('id' => $slot->teacherid));
-                $remaining = aale_slot_remaining_capacity($slot->id);
-                $slot = aale_decode_slot_json($slot);
+// ── Helper: render a slot card ────────────────────────────────────────────────
+function aale_render_slot_card($slot, $existing, $can_book, $aale, $USER) {
+    global $DB, $OUTPUT;
 
-                $row = new html_table_row();
-                $row->cells = array(
-                    ucfirst($slot->slotmode),
-                    fullname($teacher),
-                    format_string($slot->venue),
-                    userdate($slot->classdate, get_string('strftimedate', 'langconfig')) . ' ' . $slot->timestart,
-                    $remaining . ' / ' . $slot->maxstudents
-                );
+    // Real-time remaining capacity.
+    $booked    = $DB->count_records('aale_bookings', ['slotid' => $slot->id, 'status' => 'booked']);
+    $remaining = max(0, $slot->totalslots - $booked);
+    $is_full   = ($remaining <= 0);
 
-                $form = html_writer::start_tag('form', array('method' => 'POST'));
-                $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()));
-                $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'windowid', 'value' => $window->id));
-                $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'slotid', 'value' => $slot->id));
+    // Faculty name (hide if show_faculty_to_students = 0).
+    $teacher = $DB->get_record('user', ['id' => $slot->teacherid]);
+    $showfaculty = (bool)$slot->show_faculty_to_students;
 
-                if ($slot->slotmode === AALE_SLOT_MODE_CPA) {
-                    if (!empty($slot->available_levels)) {
-                        $leveloptions = array_combine($slot->available_levels, $slot->available_levels);
-                        $form .= html_writer::select($leveloptions, 'level_selected', '', get_string('selectlevel', 'mod_aale'), array('class' => 'form-control form-control-sm mb-1'));
-                    }
-                    if (!empty($slot->available_tracks)) {
-                        // available_tracks is text, might be comma separated or JSON. aale_decode_slot_json handles it.
-                        $tracks = is_array($slot->available_tracks) ? $slot->available_tracks : explode(',', $slot->available_tracks);
-                        $trackoptions = array_combine($tracks, $tracks);
-                        $form .= html_writer::select($trackoptions, 'track_selected', '', get_string('selecttrack', 'mod_aale'), array('class' => 'form-control form-control-sm mb-1'));
-                    }
-                }
+    // Card colour.
+    $cardclass = $slot->slotmode === 'class' ? 'border-success' : 'border-info';
 
-                $form .= html_writer::tag('button', get_string('bookslot', 'mod_aale'), array('type' => 'submit', 'class' => 'btn btn-primary btn-sm btn-block', 'disabled' => $remaining <= 0 ? 'disabled' : false));
-                $form .= html_writer::end_tag('form');
+    $html  = html_writer::start_div('card mb-3 ' . $cardclass);
+    $html .= html_writer::start_div('card-body');
 
-                $row->cells[] = $form;
-                $table->data[] = $row;
-            }
-            echo html_writer::table($table);
+    // Slot details row.
+    if ($showfaculty && $teacher) {
+        $html .= html_writer::div(
+            html_writer::tag('strong', get_string('facultyname', 'mod_aale') . ': ') .
+            fullname($teacher)
+        );
+    }
+    if ($slot->slotmode === 'cpa' && !empty($slot->track)) {
+        $html .= html_writer::div(
+            html_writer::tag('strong', get_string('track', 'mod_aale') . ': ') .
+            format_string($slot->track)
+        );
+    }
+    $html .= html_writer::div(
+        html_writer::tag('strong', get_string('slotdate', 'mod_aale') . ': ') .
+        format_string($slot->classdate)
+    );
+    if (!empty($slot->classtime)) {
+        $html .= html_writer::div(
+            html_writer::tag('strong', get_string('slottime', 'mod_aale') . ': ') .
+            format_string($slot->classtime)
+        );
+    }
+    $html .= html_writer::div(
+        html_writer::tag('strong', get_string('slotvenue', 'mod_aale') . ': ') .
+        format_string($slot->venue)
+    );
+
+    // Slot capacity.
+    $remainclass = $is_full ? 'text-danger font-weight-bold' : 'text-success font-weight-bold';
+    $html .= html_writer::div(
+        html_writer::tag('strong', get_string('slotsremaining', 'mod_aale') . ': ') .
+        html_writer::tag('span', $remaining . ' / ' . $slot->totalslots, ['class' => $remainclass])
+    );
+
+    // Already booked by this student?
+    if (isset($existing[$slot->id])) {
+        $html .= html_writer::div(
+            html_writer::tag('span', '✓ ' . get_string('alreadybooked', 'mod_aale'),
+                             ['class' => 'badge badge-success']),
+            'mt-2'
+        );
+
+        // Cancel button (if cancellation is allowed).
+        if ($aale->allow_cancellation && $can_book) {
+            $cancelform  = html_writer::start_tag('form', ['method' => 'POST', 'class' => 'mt-2']);
+            $cancelform .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey',   'value' => sesskey()]);
+            $cancelform .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',    'value' => 'cancel']);
+            $cancelform .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'bookingid', 'value' => $existing[$slot->id]->id]);
+            $cancelform .= html_writer::tag('button', get_string('cancelbooking', 'mod_aale'),
+                            ['type' => 'submit', 'class' => 'btn btn-outline-danger btn-sm',
+                             'onclick' => "return confirm('Cancel your booking?');"]);
+            $cancelform .= html_writer::end_tag('form');
+            $html .= $cancelform;
         }
+
+    } elseif (!$can_book) {
+        // Booking window closed.
+        $html .= html_writer::div(
+            html_writer::tag('span', get_string('bookingclosed', 'mod_aale'),
+                             ['class' => 'badge badge-secondary']),
+            'mt-2'
+        );
+
+    } elseif ($is_full) {
+        // Slot full.
+        $html .= html_writer::div(
+            html_writer::tag('span', get_string('slotsfull', 'mod_aale'),
+                             ['class' => 'badge badge-danger']),
+            'mt-2'
+        );
+
+    } else {
+        // Book button (with optional level / track selection for CPA).
+        $bookform  = html_writer::start_tag('form', ['method' => 'POST', 'class' => 'mt-2']);
+        $bookform .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+        $bookform .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',  'value' => 'book']);
+        $bookform .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'slotid',  'value' => $slot->id]);
+
+        if ($slot->slotmode === 'cpa') {
+            // Level selection (mandatory for CPA).
+            $levels = json_decode($slot->available_levels ?? '[]', true);
+            if (!empty($levels)) {
+                $levopts  = ['' => get_string('selectlevel', 'mod_aale')];
+                foreach ($levels as $lv) {
+                    $levopts[$lv] = get_string('level', 'mod_aale') . ' ' . $lv;
+                }
+                $bookform .= html_writer::div(
+                    html_writer::tag('label', get_string('selectlevel', 'mod_aale'),
+                                     ['for' => 'level_' . $slot->id, 'class' => 'mr-2 small']) .
+                    html_writer::select($levopts, 'level_selected', '',
+                                        ['id' => 'level_' . $slot->id, 'class' => 'form-control form-control-sm d-inline-block',
+                                         'style' => 'width:auto', 'required' => 'required']),
+                    'mb-2'
+                );
+            }
+        }
+
+        $bookform .= html_writer::tag(
+            'button',
+            get_string('bookslot', 'mod_aale'),
+            ['type' => 'submit', 'class' => 'btn btn-primary btn-sm']
+        );
+        $bookform .= html_writer::end_tag('form');
+        $html .= $bookform;
     }
 
-    echo html_writer::end_div(); // card-body
-    echo html_writer::end_div(); // card
+    $html .= html_writer::end_div(); // card-body
+    $html .= html_writer::end_div(); // card
+
+    return $html;
+}
+
+// ── Class Mode section ────────────────────────────────────────────────────────
+if (!empty($class_slots)) {
+    echo html_writer::tag('h4', get_string('mode_class', 'mod_aale'), ['class' => 'mt-4 mb-2']);
+    echo html_writer::tag('p',
+        get_string('class_booking_hint', 'mod_aale'),
+        ['class' => 'text-muted small']
+    );
+    foreach ($class_slots as $slot) {
+        echo aale_render_slot_card($slot, $existingbookings, $can_book, $aale, $USER);
+    }
+}
+
+// ── CPA Mode section ──────────────────────────────────────────────────────────
+if (!empty($cpa_slots)) {
+    echo html_writer::tag('h4', get_string('mode_cpa', 'mod_aale'), ['class' => 'mt-4 mb-2']);
+    echo html_writer::tag('p',
+        get_string('cpa_booking_hint', 'mod_aale'),
+        ['class' => 'text-muted small']
+    );
+    foreach ($cpa_slots as $slot) {
+        echo aale_render_slot_card($slot, $existingbookings, $can_book, $aale, $USER);
+    }
 }
 
 echo $OUTPUT->footer();
-

@@ -84,45 +84,23 @@ function aale_reset_userdata($data) {
         $aales = $DB->get_records('aale', array('course' => $data->courseid));
 
         foreach ($aales as $aale) {
-            // Get all windows for this AALE instance.
-            $windows = $DB->get_records('aale_windows', array('aaleid' => $aale->id));
-
-            foreach ($windows as $window) {
-                // Get all slots for this window.
-                $slots = $DB->get_records('aale_slots', array('windowid' => $window->id));
-
-                foreach ($slots as $slot) {
-                    // Delete notifications linked to outcomes for this slot.
-                    $outcomes = $DB->get_records('aale_outcomes', array('slotid' => $slot->id));
-                    foreach ($outcomes as $outcome) {
-                        $DB->delete_records('aale_notifications', array('outcomeid' => $outcome->id));
-                    }
-
-                    // Delete outcomes for this slot.
-                    $DB->delete_records('aale_outcomes', array('slotid' => $slot->id));
-
-                    // Delete question assignments for this slot.
-                    $DB->delete_records('aale_qassign', array('slotid' => $slot->id));
-
-                    // Delete coin transactions for this slot.
-                    $DB->delete_records('aale_coins', array('slotid' => $slot->id));
-
-                    // Delete attendance records for this slot.
-                    $DB->delete_records('aale_attendance', array('slotid' => $slot->id));
-
-                    // Delete bookings for this slot.
-                    $DB->delete_records('aale_bookings', array('slotid' => $slot->id));
+            // Cascade-delete all bookings and related data (slots stay, only bookings cleared).
+            $slotids = $DB->get_fieldset_select('aale_slots', 'id', 'aaleid = ?', [$aale->id]);
+            foreach ($slotids as $slotid) {
+                $bookingids = $DB->get_fieldset_select('aale_bookings', 'id', 'slotid = ?', [$slotid]);
+                foreach ($bookingids as $bid) {
+                    $DB->delete_records('aale_attendance',    ['bookingid' => $bid]);
+                    $DB->delete_records('aale_outcomes',      ['bookingid' => $bid]);
+                    $DB->delete_records('aale_qassign',       ['bookingid' => $bid]);
+                    $DB->delete_records('aale_notifications', ['bookingid' => $bid]);
                 }
-
-                // Delete all slots in this window.
-                $DB->delete_records('aale_slots', array('windowid' => $window->id));
-
-                // Delete window itself.
-                $DB->delete_records('aale_windows', array('id' => $window->id));
+                $DB->delete_records('aale_bookings', ['slotid' => $slotid]);
             }
+            // Clear coins ledger for this instance.
+            $DB->delete_records('aale_coins', ['aaleid' => $aale->id]);
 
-            // Reset grades for this AALE instance.
-            grade_update('mod/aale', $aale->course, 'mod', 'aale', $aale->id, 0, null, array('reset' => true));
+            // Reset grades.
+            grade_update('mod/aale', $aale->course, 'mod', 'aale', $aale->id, 0, null, ['reset' => true]);
         }
 
         $status[] = array('component' => $componentstr, 'item' => get_string('reset_aale_bookings', 'mod_aale'),
@@ -213,10 +191,22 @@ function aale_get_coursemodule_info($coursemodule) {
 function aale_add_instance($data, $mform = null) {
     global $DB;
 
-    $data->timecreated = time();
+    $data->timecreated  = time();
     $data->timemodified = time();
 
-    // Insert the aale record into database.
+    // Encode multi-select arrays (groups / users) to JSON strings.
+    if (isset($data->restrict_groups) && is_array($data->restrict_groups)) {
+        $data->restrict_groups = json_encode(array_values($data->restrict_groups));
+    }
+    if (isset($data->restrict_users) && is_array($data->restrict_users)) {
+        $data->restrict_users = json_encode(array_values($data->restrict_users));
+    }
+
+    // Ensure restrict_type is set.
+    if (empty($data->restrict_type)) {
+        $data->restrict_type = 'all';
+    }
+
     $data->id = $DB->insert_record('aale', $data);
 
     return $data->id;
@@ -238,9 +228,20 @@ function aale_update_instance($data, $mform = null) {
     global $DB;
 
     $data->timemodified = time();
-    $data->id = $data->instance;
+    $data->id           = $data->instance;
 
-    // Update the aale record in database.
+    // Encode multi-select arrays to JSON strings.
+    if (isset($data->restrict_groups) && is_array($data->restrict_groups)) {
+        $data->restrict_groups = json_encode(array_values($data->restrict_groups));
+    }
+    if (isset($data->restrict_users) && is_array($data->restrict_users)) {
+        $data->restrict_users = json_encode(array_values($data->restrict_users));
+    }
+
+    if (empty($data->restrict_type)) {
+        $data->restrict_type = 'all';
+    }
+
     return $DB->update_record('aale', $data);
 }
 
@@ -257,51 +258,26 @@ function aale_update_instance($data, $mform = null) {
 function aale_delete_instance($id) {
     global $DB;
 
-    // Load the aale instance.
-    if (!$aale = $DB->get_record('aale', array('id' => $id))) {
+    if (!$DB->get_record('aale', ['id' => $id])) {
         return false;
     }
 
-    // Get all windows for this AALE instance.
-    $windows = $DB->get_records('aale_windows', array('aaleid' => $id));
-
-    // Process cascading deletion.
-    foreach ($windows as $window) {
-        // Get all slots for this window.
-        $slots = $DB->get_records('aale_slots', array('windowid' => $window->id));
-
-        foreach ($slots as $slot) {
-            // Delete notifications linked to outcomes for this slot.
-            $outcomes = $DB->get_records('aale_outcomes', array('slotid' => $slot->id));
-            foreach ($outcomes as $outcome) {
-                $DB->delete_records('aale_notifications', array('outcomeid' => $outcome->id));
-            }
-
-            // Delete outcomes for this slot.
-            $DB->delete_records('aale_outcomes', array('slotid' => $slot->id));
-
-            // Delete question assignments for this slot.
-            $DB->delete_records('aale_qassign', array('slotid' => $slot->id));
-
-            // Delete coin transactions for this slot.
-            $DB->delete_records('aale_coins', array('slotid' => $slot->id));
-
-            // Delete attendance records for this slot.
-            $DB->delete_records('aale_attendance', array('slotid' => $slot->id));
-
-            // Delete bookings for this slot.
-            $DB->delete_records('aale_bookings', array('slotid' => $slot->id));
+    // Cascade: slots → bookings → attendance / outcomes / qassign / notifications.
+    $slotids = $DB->get_fieldset_select('aale_slots', 'id', 'aaleid = ?', [$id]);
+    foreach ($slotids as $slotid) {
+        $bookingids = $DB->get_fieldset_select('aale_bookings', 'id', 'slotid = ?', [$slotid]);
+        foreach ($bookingids as $bid) {
+            $DB->delete_records('aale_attendance',    ['bookingid' => $bid]);
+            $DB->delete_records('aale_outcomes',      ['bookingid' => $bid]);
+            $DB->delete_records('aale_qassign',       ['bookingid' => $bid]);
+            $DB->delete_records('aale_notifications', ['bookingid' => $bid]);
         }
-
-        // Delete all slots in this window.
-        $DB->delete_records('aale_slots', array('windowid' => $window->id));
-
-        // Delete window itself.
-        $DB->delete_records('aale_windows', array('id' => $window->id));
+        $DB->delete_records('aale_bookings', ['slotid' => $slotid]);
     }
+    $DB->delete_records('aale_slots', ['aaleid' => $id]);
+    $DB->delete_records('aale_coins', ['aaleid' => $id]);
 
-    // Delete the aale instance itself.
-    return $DB->delete_records('aale', array('id' => $id));
+    return $DB->delete_records('aale', ['id' => $id]);
 }
 
 /**

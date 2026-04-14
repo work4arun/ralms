@@ -15,7 +15,11 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Admin page to list and manage slots (Layer 2) for AALE activity.
+ * Admin page — list and manage slots for an AALE activity.
+ *
+ * Slots are organised per activity (aaleid).
+ * Columns show: Mode, Faculty, Venue, Date, Time, Total Slots, Booked, Sessions, Actions.
+ * Faculty column shows "Hidden" for CPA slots where show_faculty_to_students = 0.
  *
  * @package   mod_aale
  * @copyright 2026 AALE Contributors
@@ -26,123 +30,165 @@ require_once('../../../config.php');
 require_once('../locallib.php');
 require_once('../lib.php');
 
-// Get course module ID from URL.
 $id = required_param('id', PARAM_INT);
-$windowid = optional_param('windowid', 0, PARAM_INT);
 
-// Get the course module and course.
-$cm = get_coursemodule_from_id('aale', $id, 0, false, MUST_EXIST);
-$course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
-$aale = $DB->get_record('aale', array('id' => $cm->instance), '*', MUST_EXIST);
+$cm     = get_coursemodule_from_id('aale', $id, 0, false, MUST_EXIST);
+$course = $DB->get_record('course', ['id' => $cm->course],   '*', MUST_EXIST);
+$aale   = $DB->get_record('aale',   ['id' => $cm->instance], '*', MUST_EXIST);
 
-// Require login and check capability.
 require_login($course, false, $cm);
-require_capability('mod/aale:manageslots', context_module::instance($cm->id));
+$ctx = context_module::instance($cm->id);
+require_capability('mod/aale:manageslots', $ctx);
 
-// Set up the page.
-$PAGE->set_url(new moodle_url('/mod/aale/admin/slots.php', array('id' => $id, 'windowid' => $windowid)));
-$PAGE->set_title(get_string('manageslots', 'aale'));
-$PAGE->set_heading(get_string('manageslots', 'aale'));
-$PAGE->set_context(context_module::instance($cm->id));
+$PAGE->set_url(new moodle_url('/mod/aale/admin/slots.php', ['id' => $id]));
+$PAGE->set_title(get_string('manageslots', 'mod_aale'));
+$PAGE->set_heading(get_string('manageslots', 'mod_aale'));
+$PAGE->set_context($ctx);
 
-// Handle delete action.
+// ── Handle delete ─────────────────────────────────────────────────────────────
 if (optional_param('action', '', PARAM_ALPHA) === 'delete') {
     $slotid = required_param('slotid', PARAM_INT);
     require_sesskey();
 
-    $slot = $DB->get_record('aale_slots', array('id' => $slotid));
+    $slot = $DB->get_record('aale_slots', ['id' => $slotid, 'aaleid' => $aale->id]);
     if ($slot) {
-        $windowid = $slot->windowid;
-        aale_delete_slot($slotid);
-        redirect(new moodle_url('/mod/aale/admin/slots.php', array('id' => $id, 'windowid' => $windowid)),
-                 get_string('slotdeleted', 'aale'), \core\output\notification::NOTIFY_SUCCESS);
+        // Also delete associated bookings and attendance.
+        $bookingids = $DB->get_fieldset_select('aale_bookings', 'id', 'slotid = ?', [$slotid]);
+        foreach ($bookingids as $bid) {
+            $DB->delete_records('aale_attendance', ['bookingid' => $bid]);
+            $DB->delete_records('aale_outcomes',   ['bookingid' => $bid]);
+            $DB->delete_records('aale_qassign',    ['bookingid' => $bid]);
+        }
+        $DB->delete_records('aale_bookings', ['slotid' => $slotid]);
+        $DB->delete_records('aale_slots',    ['id'     => $slotid]);
+
+        redirect(
+            new moodle_url('/mod/aale/admin/slots.php', ['id' => $id]),
+            get_string('slotdeleted', 'mod_aale'),
+            null,
+            \core\output\notification::NOTIFY_SUCCESS
+        );
     }
 }
 
 echo $OUTPUT->header();
 
-// Build where clause for filtering.
-$where = array('cmid' => $cm->id);
-$params = array();
+// ── Page title + "Create slot" button ────────────────────────────────────────
+echo $OUTPUT->heading(get_string('manageslots', 'mod_aale'), 2);
 
-if ($windowid) {
-    $where['windowid'] = $windowid;
+$createurl = new moodle_url('/mod/aale/admin/create_slot.php', ['id' => $id]);
+echo $OUTPUT->single_button($createurl, get_string('createnewslot', 'mod_aale'), 'get',
+                             ['class' => 'mb-3']);
+
+// ── Fetch slots for this activity ─────────────────────────────────────────────
+$slots = $DB->get_records('aale_slots', ['aaleid' => $aale->id], 'slotmode ASC, classdate ASC');
+
+if (empty($slots)) {
+    echo $OUTPUT->notification(get_string('noslots', 'mod_aale'), 'info');
+    echo $OUTPUT->footer();
+    exit;
 }
 
-// Get all slots for this activity (or filtered by window).
-$slots = $DB->get_records('aale_slots', $where, 'classdate ASC, timestart ASC');
-
-// Start the table.
+// ── Build table ───────────────────────────────────────────────────────────────
 $table = new html_table();
-$table->head = array(
-    get_string('mode', 'aale'),
-    get_string('teacher', 'aale'),
-    get_string('venue', 'aale'),
-    get_string('date', 'aale'),
-    get_string('time', 'aale'),
-    get_string('maxstudents', 'aale'),
-    get_string('booked', 'aale'),
-    get_string('actions', 'aale')
-);
-$table->attributes = array('class' => 'generaltable');
-$table->data = array();
+$table->head = [
+    get_string('mode',         'mod_aale'),
+    get_string('teacher',      'mod_aale'),
+    get_string('venue',        'mod_aale'),
+    get_string('date',         'mod_aale'),
+    get_string('time',         'mod_aale'),
+    get_string('totalslots',   'mod_aale'),
+    get_string('booked',       'mod_aale'),
+    get_string('remaining',    'mod_aale'),
+    get_string('sessions',     'mod_aale'),
+    get_string('actions',      'mod_aale'),
+];
+$table->attributes = ['class' => 'generaltable table-hover'];
+$table->data = [];
 
 foreach ($slots as $slot) {
-    // Get teacher user.
-    $teacher = $DB->get_record('user', array('id' => $slot->teacherid));
-    $teachername = $teacher ? fullname($teacher) : get_string('unknown', 'aale');
+    $teacher     = $DB->get_record('user', ['id' => $slot->teacherid]);
+    $teachername = $teacher ? fullname($teacher) : get_string('unknown', 'mod_aale');
 
-    // Count bookings for this slot.
-    $bookingcount = $DB->count_records('aale_bookings', array('slotid' => $slot->id));
+    // In CPA mode, show "(hidden from students)" if show_faculty_to_students = 0.
+    if ($slot->slotmode === 'cpa' && !$slot->show_faculty_to_students) {
+        $teachername .= html_writer::tag(
+            'span', ' ' . get_string('hiddenfromstudents', 'mod_aale'),
+            ['class' => 'badge badge-warning ml-1']
+        );
+    }
 
-    // Format date and time.
-    $slotdate = userdate($slot->classdate, '%d %b %Y');
-    $slottime = sprintf('%02d:%02d - %02d:%02d',
-                        intval($slot->timestart / 60),
-                        $slot->timestart % 60,
-                        intval($slot->timeend / 60),
-                        $slot->timeend % 60);
+    $booked    = $DB->count_records('aale_bookings', ['slotid' => $slot->id, 'status' => 'booked']);
+    $remaining = max(0, $slot->totalslots - $booked);
 
-    // Mode label.
-    $modetext = ($slot->slotmode === 'class') ? get_string('mode_class', 'aale') : get_string('mode_cpa', 'aale');
+    // Mode badge.
+    $modebadgeclass = $slot->slotmode === 'class' ? 'badge-success' : 'badge-info';
+    $modelabel      = $slot->slotmode === 'class'
+        ? get_string('mode_class', 'mod_aale')
+        : get_string('mode_cpa',   'mod_aale');
+    $modebadge = html_writer::tag('span', $modelabel, ['class' => 'badge ' . $modebadgeclass]);
+
+    // For CPA mode also show track.
+    if ($slot->slotmode === 'cpa' && !empty($slot->track)) {
+        $modebadge .= html_writer::tag(
+            'div',
+            html_writer::tag('small', get_string('track', 'mod_aale') . ': ' . format_string($slot->track),
+                             ['class' => 'text-muted']),
+            ['class' => 'mt-1']
+        );
+    }
+
+    // Sessions column: for class mode show count; for CPA show assessment type.
+    if ($slot->slotmode === 'class') {
+        $sessionscol = $slot->att_sessions . ' ' . get_string('sessions', 'mod_aale');
+    } else {
+        $sessionscol = html_writer::tag(
+            'span',
+            strtoupper($slot->assessmenttype),
+            ['class' => 'badge badge-secondary']
+        );
+    }
+
+    // Remaining slot indicator with colour.
+    $remainclass = $remaining === 0 ? 'text-danger font-weight-bold' : 'text-success';
+    $remainhtml  = html_writer::tag('span', $remaining, ['class' => $remainclass]);
 
     // Action buttons.
-    $editurl = new moodle_url('/mod/aale/admin/create_slot.php',
-                              array('id' => $id, 'windowid' => $slot->windowid, 'slotid' => $slot->id));
-    $editbtn = html_writer::link($editurl, get_string('edit', 'aale'),
-                                 array('class' => 'btn btn-sm btn-primary'));
+    $editurl = new moodle_url('/mod/aale/admin/create_slot.php', ['id' => $id, 'slotid' => $slot->id]);
+    $editbtn = html_writer::link($editurl, get_string('edit', 'mod_aale'),
+                                 ['class' => 'btn btn-sm btn-primary mr-1']);
 
     $deleteurl = new moodle_url('/mod/aale/admin/slots.php',
-                                array('id' => $id, 'windowid' => $slot->windowid,
-                                      'action' => 'delete', 'slotid' => $slot->id, 'sesskey' => sesskey()));
-    $deletebtn = html_writer::link($deleteurl, get_string('delete', 'aale'),
-                                   array('class' => 'btn btn-sm btn-danger',
-                                         'onclick' => "return confirm('" . addslashes(get_string('deleteconfirm', 'aale')) . "');"));
+        ['id' => $id, 'action' => 'delete', 'slotid' => $slot->id, 'sesskey' => sesskey()]);
+    $deletebtn = html_writer::link($deleteurl, get_string('delete', 'mod_aale'), [
+        'class'   => 'btn btn-sm btn-danger',
+        'onclick' => "return confirm('" . addslashes(get_string('deleteconfirm', 'mod_aale')) . "');",
+    ]);
 
-    $actions = $editbtn . ' ' . $deletebtn;
+    // Faculty attendance / outcome link.
+    if ($slot->slotmode === 'class') {
+        $atturl = new moodle_url('/mod/aale/faculty/attendance.php', ['id' => $id, 'slotid' => $slot->id]);
+        $attbtn = html_writer::link($atturl, get_string('viewattendance', 'mod_aale'),
+                                    ['class' => 'btn btn-sm btn-outline-secondary mr-1']);
+    } else {
+        $outurl = new moodle_url('/mod/aale/faculty/outcomes.php', ['id' => $id, 'slotid' => $slot->id]);
+        $attbtn = html_writer::link($outurl, get_string('viewoutcomes', 'mod_aale'),
+                                    ['class' => 'btn btn-sm btn-outline-secondary mr-1']);
+    }
 
-    $table->data[] = array(
-        $modetext,
+    $table->data[] = [
+        $modebadge,
         $teachername,
-        $slot->venue,
-        $slotdate,
-        $slottime,
-        $slot->maxstudents,
-        $bookingcount,
-        $actions
-    );
-}
-
-// Create new slot button (only if a window is selected).
-if ($windowid) {
-    $createurl = new moodle_url('/mod/aale/admin/create_slot.php',
-                               array('id' => $id, 'windowid' => $windowid));
-    $createbtn = $OUTPUT->single_button($createurl, get_string('createnewslot', 'aale'), 'get');
-    echo $createbtn;
-} else {
-    echo $OUTPUT->notification(get_string('selectwindowfirst', 'aale'), 'info');
+        format_string($slot->venue),
+        format_string($slot->classdate),
+        format_string($slot->classtime),
+        $slot->totalslots,
+        $booked,
+        $remainhtml,
+        $sessionscol,
+        $attbtn . $editbtn . $deletebtn,
+    ];
 }
 
 echo html_writer::table($table);
-
 echo $OUTPUT->footer();

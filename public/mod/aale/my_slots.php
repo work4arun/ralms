@@ -181,60 +181,73 @@ if (empty($bookings)) {
     echo html_writer::start_tag('table', array('class' => 'table table-striped table-responsive'));
     echo html_writer::start_tag('thead');
     echo html_writer::start_tag('tr');
-    echo html_writer::tag('th', get_string('window', 'mod_aale'));
-    echo html_writer::tag('th', get_string('mode', 'mod_aale'));
-    echo html_writer::tag('th', get_string('date', 'mod_aale'));
-    echo html_writer::tag('th', get_string('time', 'mod_aale'));
-    echo html_writer::tag('th', get_string('venue', 'mod_aale'));
-    echo html_writer::tag('th', get_string('teacher', 'mod_aale'));
-    echo html_writer::tag('th', get_string('status', 'mod_aale'));
-    echo html_writer::tag('th', get_string('outcome', 'mod_aale'));
+    echo html_writer::tag('th', get_string('mode',       'mod_aale'));
+    echo html_writer::tag('th', get_string('date',       'mod_aale'));
+    echo html_writer::tag('th', get_string('time',       'mod_aale'));
+    echo html_writer::tag('th', get_string('venue',      'mod_aale'));
+    echo html_writer::tag('th', get_string('teacher',    'mod_aale'));
+    echo html_writer::tag('th', get_string('status',     'mod_aale'));
+    echo html_writer::tag('th', get_string('outcome',    'mod_aale'));
     echo html_writer::tag('th', get_string('attendance', 'mod_aale'));
     echo html_writer::end_tag('tr');
     echo html_writer::end_tag('thead');
     echo html_writer::start_tag('tbody');
 
     foreach ($bookings as $booking) {
-        $window = $DB->get_record('aale_windows', array('id' => $booking->windowid), '*');
-        $slot = $DB->get_record('aale_slots', array('id' => $booking->slotid), '*');
-        $teacher = $DB->get_record('user', array('id' => $slot->teacherid), '*');
+        $slot    = $DB->get_record('aale_slots', ['id' => $booking->slotid]);
+        $teacher = $slot ? $DB->get_record('user', ['id' => $slot->teacherid]) : null;
 
-        // Status badge
-        $statuscolors = array(
-            'booked' => 'primary',
-            'attended' => 'success',
-            'absent' => 'danger',
-            'cancelled' => 'secondary'
-        );
+        // Status badge.
+        $statuscolors = [
+            'booked'    => 'primary',
+            'present'   => 'success',
+            'attended'  => 'success',
+            'absent'    => 'danger',
+            'cancelled' => 'secondary',
+        ];
         $statuscolor = $statuscolors[$booking->status] ?? 'secondary';
-        $statusbadge = html_writer::tag('span', get_string('status:' . $booking->status, 'mod_aale'), array('class' => 'badge badge-' . $statuscolor));
+        $statusbadge = html_writer::tag('span', ucfirst($booking->status),
+                                         ['class' => 'badge badge-' . $statuscolor]);
 
-        // Outcome badge
-        $outcomecolors = array(
-            'cleared' => 'success',
-            'try_again' => 'warning',
-            'malpractice' => 'danger',
-            'ignore' => 'secondary',
-            'pending' => 'light'
-        );
-        $outcomecolor = $outcomecolors[$booking->outcome] ?? 'light';
-        $outcomebadge = !empty($booking->outcome) ? html_writer::tag('span', get_string('outcome:' . $booking->outcome, 'mod_aale'), array('class' => 'badge badge-' . $outcomecolor)) : '-';
+        // Outcome badge (W1 / try_again / small_practice).
+        $outcomerec   = $DB->get_record('aale_outcomes', ['bookingid' => $booking->id]);
+        $outcomecolors = [
+            'W1'             => 'success',
+            'try_again'      => 'warning',
+            'small_practice' => 'info',
+        ];
+        if ($outcomerec && isset($outcomecolors[$outcomerec->outcome])) {
+            $outcomebadge = html_writer::tag('span',
+                get_string('outcome_' . $outcomerec->outcome, 'mod_aale'),
+                ['class' => 'badge badge-' . $outcomecolors[$outcomerec->outcome]]);
+        } else {
+            $outcomebadge = '–';
+        }
 
-        // Mode badge
-        $modebadge = $slot->mode === 'cpa' ?
-            html_writer::tag('span', 'CPA', array('class' => 'badge badge-info')) :
-            html_writer::tag('span', 'Class', array('class' => 'badge badge-success'));
+        // Mode badge.
+        $modebadge = ($slot && $slot->slotmode === 'cpa')
+            ? html_writer::tag('span', 'CPA',   ['class' => 'badge badge-info'])
+            : html_writer::tag('span', 'Class', ['class' => 'badge badge-success']);
 
-        // Attendance percentage
-        $attendancepct = !empty($booking->attendance_percentage) ? $booking->attendance_percentage . '%' : '-';
+        // Show faculty only if allowed.
+        $teachercol = '–';
+        if ($slot && !empty($slot->show_faculty_to_students) && $teacher) {
+            $teachercol = fullname($teacher);
+        }
+
+        // Attendance count.
+        $attcount     = $slot ? $DB->count_records('aale_attendance', ['bookingid' => $booking->id, 'present' => 1]) : 0;
+        $numsessions  = $slot ? (int)$slot->att_sessions : 0;
+        $attendancepct = $numsessions > 0
+            ? round(($attcount / $numsessions) * 100) . '%'
+            : '–';
 
         echo html_writer::start_tag('tr');
-        echo html_writer::tag('td', format_string($window->title ?? ''));
         echo html_writer::tag('td', $modebadge);
-        echo html_writer::tag('td', userdate($slot->starttime, get_string('strftimedate', 'langconfig')));
-        echo html_writer::tag('td', userdate($slot->starttime, '%H:%M'));
-        echo html_writer::tag('td', format_string($slot->venue ?? ''));
-        echo html_writer::tag('td', fullname($teacher));
+        echo html_writer::tag('td', $slot ? format_string($slot->classdate)  : '–');
+        echo html_writer::tag('td', $slot ? format_string($slot->classtime)  : '–');
+        echo html_writer::tag('td', $slot ? format_string($slot->venue)      : '–');
+        echo html_writer::tag('td', $teachercol);
         echo html_writer::tag('td', $statusbadge);
         echo html_writer::tag('td', $outcomebadge);
         echo html_writer::tag('td', $attendancepct);

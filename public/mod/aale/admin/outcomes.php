@@ -60,29 +60,25 @@ echo $OUTPUT->header();
 
 // If slotid is provided, show outcomes for that slot
 if ($slotid) {
-    $slot = $DB->get_record('aale_slot', array('id' => $slotid), '*', MUST_EXIST);
+    $slot = $DB->get_record('aale_slots', ['id' => $slotid], '*', MUST_EXIST);
 
-    // Display slot details
-    $date_display = userdate($slot->date_start, get_string('strftimedate', 'langconfig'));
-    $time_display = userdate($slot->date_start, get_string('strftimetime', 'langconfig'));
-
+    // Display slot details (classdate and classtime are display strings).
     echo $OUTPUT->box(
-        html_writer::div(get_string('date', 'mod_aale') . ': ' . $date_display) .
-        html_writer::div(get_string('time', 'mod_aale') . ': ' . $time_display) .
+        html_writer::div(get_string('date',  'mod_aale') . ': ' . format_string($slot->classdate)) .
+        html_writer::div(get_string('time',  'mod_aale') . ': ' . format_string($slot->classtime)) .
         html_writer::div(get_string('venue', 'mod_aale') . ': ' . format_string($slot->venue)) .
-        html_writer::div(get_string('mode', 'mod_aale') . ': ' . format_string($slot->mode)),
+        html_writer::div(get_string('mode',  'mod_aale') . ': ' . format_string($slot->slotmode)),
         'slotdetails'
     );
 
-    // Get outcome summary
+    // Get outcome summary.
     $summary = aale_slot_outcome_summary($slotid);
 
     $summary_html = html_writer::start_div('outcome-summary-bar');
-    $summary_html .= html_writer::div(get_string('cleared', 'mod_aale') . ': ' . ($summary['cleared'] ?? 0), 'summary-item cleared');
-    $summary_html .= html_writer::div(get_string('tryagain', 'mod_aale') . ': ' . ($summary['try_again'] ?? 0), 'summary-item tryagain');
-    $summary_html .= html_writer::div(get_string('malpractice', 'mod_aale') . ': ' . ($summary['malpractice'] ?? 0), 'summary-item malpractice');
-    $summary_html .= html_writer::div(get_string('ignore', 'mod_aale') . ': ' . ($summary['ignore'] ?? 0), 'summary-item ignore');
-    $summary_html .= html_writer::div(get_string('pending', 'mod_aale') . ': ' . ($summary['pending'] ?? 0), 'summary-item pending');
+    $summary_html .= html_writer::div(get_string('outcome_W1',             'mod_aale') . ': ' . ($summary['W1'] ?? 0),             'summary-item cleared');
+    $summary_html .= html_writer::div(get_string('outcome_try_again',      'mod_aale') . ': ' . ($summary['try_again'] ?? 0),      'summary-item tryagain');
+    $summary_html .= html_writer::div(get_string('outcome_small_practice', 'mod_aale') . ': ' . ($summary['small_practice'] ?? 0), 'summary-item small-practice');
+    $summary_html .= html_writer::div(get_string('pending',                'mod_aale') . ': ' . ($summary['pending'] ?? 0),        'summary-item pending');
     $summary_html .= html_writer::end_div();
 
     echo $OUTPUT->box($summary_html);
@@ -194,7 +190,7 @@ if ($slotid) {
     }
 } else {
     // Show list of slots to choose from
-    $slots = $DB->get_records('aale_slot', array('aale_id' => $aale->id), 'date_start DESC');
+    $slots = $DB->get_records('aale_slots', ['aaleid' => $aale->id, 'slotmode' => 'cpa'], 'classdate ASC');
 
     if (empty($slots)) {
         echo $OUTPUT->notification(get_string('noslots', 'mod_aale'));
@@ -212,15 +208,12 @@ if ($slotid) {
         $table->attributes = array('class' => 'table table-striped');
 
         foreach ($slots as $slot) {
-            $date_display = userdate($slot->date_start, get_string('strftimedate', 'langconfig'));
-            $time_display = userdate($slot->date_start, get_string('strftimetime', 'langconfig'));
-
             $row = new html_table_row();
             $row->cells = array(
-                new html_table_cell($date_display),
-                new html_table_cell($time_display),
+                new html_table_cell(format_string($slot->classdate)),
+                new html_table_cell(format_string($slot->classtime)),
                 new html_table_cell(format_string($slot->venue)),
-                new html_table_cell(format_string($slot->mode)),
+                new html_table_cell(strtoupper($slot->slotmode)),
                 new html_table_cell(
                     html_writer::link(
                         new moodle_url('/mod/aale/admin/outcomes.php', array('id' => $cmid, 'slotid' => $slot->id)),

@@ -15,10 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The main form for the mod_aale activity plugin.
+ * AALE activity creation / edit form — Layer 1.
+ *
+ * Layer 1 captures:
+ *   1. Activity Name  (mandatory)
+ *   2. Restrict Access — booking open/close date & time
+ *   3. Student restriction — all students | specific groups | specific individuals
+ *
+ * After saving (Save and Display), the admin is taken to view.php where they can
+ * begin creating slots (Class Mode or CPA Mode).
  *
  * @package   mod_aale
- * @copyright 2026
+ * @copyright 2026 AALE Contributors
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -27,162 +35,212 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/course/moodleform_mod.php');
 
 /**
- * Module instance edit form class.
+ * Module instance edit form — Layer 1.
  *
  * @package   mod_aale
- * @copyright 2026
+ * @copyright 2026 AALE Contributors
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class mod_aale_mod_form extends moodleform_mod {
 
     /**
-     * Defines the form.
+     * Defines the form fields.
      */
     public function definition() {
-        global $CFG;
+        global $CFG, $DB, $COURSE;
 
         $mform = $this->_form;
 
-        // General section.
+        // ── SECTION 1: General ───────────────────────────────────────────────
         $mform->addElement('header', 'general', get_string('general', 'form'));
         $mform->setExpanded('general', true);
 
-        // Activity name.
-        $mform->addElement('text', 'name', get_string('activityname', 'mod_aale'), array('size' => '64'));
+        // Activity name — mandatory Layer 1 field.
+        $mform->addElement(
+            'text', 'name',
+            get_string('activityname', 'mod_aale'),
+            ['size' => '64']
+        );
         $mform->setType('name', PARAM_TEXT);
         $mform->addRule('name', null, 'required', null, 'client');
         $mform->addRule('name', get_string('maximumchars', '', 255), 'maxlength', 255, 'client');
+        $mform->addHelpButton('name', 'activityname', 'mod_aale');
 
-        // Standard intro elements.
+        // Standard Moodle intro / description field.
         $this->standard_intro_elements();
 
-        // Additional instructions.
-        $mform->addElement('editor', 'intro_text', get_string('intro_text', 'mod_aale'),
-                array('rows' => 10), array('maxfiles' => EDITOR_UNLIMITED_FILES,
-                'noclean' => true, 'context' => $this->context));
-        $mform->setType('intro_text', PARAM_RAW);
-        $mform->addHelpButton('intro_text', 'intro_text', 'mod_aale');
+        // ── SECTION 2: Restrict Access (Layer 1 mandatory) ───────────────────
+        $mform->addElement('header', 'restrictaccess', get_string('restrictaccess', 'mod_aale'));
+        $mform->setExpanded('restrictaccess', true);
 
-        // Maximum sessions per booking.
-        $sessionoptions = array();
-        for ($i = 1; $i <= 16; $i++) {
-            $sessionoptions[$i] = $i;
+        // Booking opens.
+        $mform->addElement(
+            'date_time_selector', 'bookingopen',
+            get_string('bookingopen', 'mod_aale'),
+            ['optional' => false]
+        );
+        $mform->addRule('bookingopen', get_string('required', 'mod_aale'), 'required', null, 'client');
+        $mform->addHelpButton('bookingopen', 'bookingopen', 'mod_aale');
+
+        // Booking closes.
+        $mform->addElement(
+            'date_time_selector', 'bookingclose',
+            get_string('bookingclose', 'mod_aale'),
+            ['optional' => false]
+        );
+        $mform->addRule('bookingclose', get_string('required', 'mod_aale'), 'required', null, 'client');
+        $mform->addHelpButton('bookingclose', 'bookingclose', 'mod_aale');
+
+        // ── SECTION 3: Student Restriction ───────────────────────────────────
+        $mform->addElement('header', 'studentrestriction', get_string('studentrestriction', 'mod_aale'));
+        $mform->setExpanded('studentrestriction', true);
+
+        // Restrict type selector.
+        $restrictoptions = [
+            'all'         => get_string('restrict_all', 'mod_aale'),
+            'groups'      => get_string('restrict_groups', 'mod_aale'),
+            'individuals' => get_string('restrict_individuals', 'mod_aale'),
+        ];
+        $mform->addElement(
+            'select', 'restrict_type',
+            get_string('restrict_type', 'mod_aale'),
+            $restrictoptions
+        );
+        $mform->setDefault('restrict_type', 'all');
+        $mform->setType('restrict_type', PARAM_ALPHA);
+        $mform->addHelpButton('restrict_type', 'restrict_type', 'mod_aale');
+
+        // Group multi-select (shown only when restrict_type = groups).
+        $groups = groups_get_all_groups($COURSE->id);
+        $groupoptions = [];
+        foreach ($groups as $g) {
+            $groupoptions[$g->id] = format_string($g->name);
         }
-        $mform->addElement('select', 'max_sessions', get_string('max_sessions', 'mod_aale'), $sessionoptions);
-        $mform->setDefault('max_sessions', 16);
-        $mform->setType('max_sessions', PARAM_INT);
-        $mform->addHelpButton('max_sessions', 'max_sessions', 'mod_aale');
+        if (!empty($groupoptions)) {
+            $mform->addElement(
+                'select', 'restrict_groups',
+                get_string('restrict_groups_select', 'mod_aale'),
+                $groupoptions,
+                ['multiple' => 'multiple', 'size' => min(8, count($groupoptions))]
+            );
+            $mform->setType('restrict_groups', PARAM_RAW); // stored as JSON
+            $mform->hideIf('restrict_groups', 'restrict_type', 'neq', 'groups');
+            $mform->addHelpButton('restrict_groups', 'restrict_groups_select', 'mod_aale');
+        } else {
+            // No groups exist yet; show an informational note.
+            $mform->addElement(
+                'static', 'restrict_groups_note', '',
+                get_string('nogroups', 'mod_aale')
+            );
+            $mform->hideIf('restrict_groups_note', 'restrict_type', 'neq', 'groups');
+        }
 
-        // Sessions per day (hidden/static display - always 4).
-        $mform->addElement('static', 'sessions_per_day_static', get_string('sessions_per_day', 'mod_aale'),
-                '4 (FN1, FN2, AN1, AN2)');
+        // Individual student multi-select (shown only when restrict_type = individuals).
+        // We load all enrolled students for the course.
+        $context = context_course::instance($COURSE->id);
+        $enrolledstudents = get_enrolled_users($context, 'mod/aale:bookslot');
+        $studentoptions = [];
+        foreach ($enrolledstudents as $s) {
+            $studentoptions[$s->id] = fullname($s) . ' (' . $s->email . ')';
+        }
+        if (!empty($studentoptions)) {
+            $mform->addElement(
+                'select', 'restrict_users',
+                get_string('restrict_users_select', 'mod_aale'),
+                $studentoptions,
+                ['multiple' => 'multiple', 'size' => min(10, count($studentoptions))]
+            );
+            $mform->setType('restrict_users', PARAM_RAW); // stored as JSON
+            $mform->hideIf('restrict_users', 'restrict_type', 'neq', 'individuals');
+            $mform->addHelpButton('restrict_users', 'restrict_users_select', 'mod_aale');
+        } else {
+            $mform->addElement(
+                'static', 'restrict_users_note', '',
+                get_string('nostudents', 'mod_aale')
+            );
+            $mform->hideIf('restrict_users_note', 'restrict_type', 'neq', 'individuals');
+        }
 
-        // Booking section.
-        $mform->addElement('header', 'bookingheader', get_string('bookingsection', 'mod_aale'));
+        // ── SECTION 4: General Settings ──────────────────────────────────────
+        $mform->addElement('header', 'generalsettings', get_string('generalsettings', 'mod_aale'));
 
-        // Allow cancellation.
-        $mform->addElement('advcheckbox', 'allow_cancellation', get_string('allow_cancellation', 'mod_aale'));
+        // Allow students to cancel bookings.
+        $mform->addElement(
+            'advcheckbox', 'allow_cancellation',
+            get_string('allow_cancellation', 'mod_aale')
+        );
         $mform->setDefault('allow_cancellation', 1);
         $mform->setType('allow_cancellation', PARAM_INT);
         $mform->addHelpButton('allow_cancellation', 'allow_cancellation', 'mod_aale');
 
-        // Maximum bookings per student.
-        $mform->addElement('text', 'max_bookings_per_student', get_string('max_bookings_per_student', 'mod_aale'));
-        $mform->setDefault('max_bookings_per_student', 1);
-        $mform->setType('max_bookings_per_student', PARAM_INT);
-        $mform->addRule('max_bookings_per_student', get_string('err_numeric', 'form'), 'numeric', null, 'client');
-        $mform->addHelpButton('max_bookings_per_student', 'max_bookings_per_student', 'mod_aale');
-
-        // Assessment section.
-        $mform->addElement('header', 'assessmentheader', get_string('assessmentsection', 'mod_aale'));
-
-        // CPA enabled.
-        $mform->addElement('advcheckbox', 'cpa_enabled', get_string('cpa_enabled', 'mod_aale'));
-        $mform->setDefault('cpa_enabled', 1);
-        $mform->setType('cpa_enabled', PARAM_INT);
-        $mform->addHelpButton('cpa_enabled', 'cpa_enabled', 'mod_aale');
-
-        // Default questions per student.
-        $mform->addElement('text', 'default_questions_per_student', get_string('default_questions_per_student', 'mod_aale'));
-        $mform->setDefault('default_questions_per_student', 2);
-        $mform->setType('default_questions_per_student', PARAM_INT);
-        $mform->addRule('default_questions_per_student', get_string('err_numeric', 'form'), 'numeric', null, 'client');
-        $mform->addHelpButton('default_questions_per_student', 'default_questions_per_student', 'mod_aale');
-
-        // Allow level selection.
-        $mform->addElement('advcheckbox', 'allow_level_selection', get_string('allow_level_selection', 'mod_aale'));
-        $mform->setDefault('allow_level_selection', 1);
-        $mform->setType('allow_level_selection', PARAM_INT);
-        $mform->addHelpButton('allow_level_selection', 'allow_level_selection', 'mod_aale');
-
-        // Allow track selection.
-        $mform->addElement('advcheckbox', 'allow_track_selection', get_string('allow_track_selection', 'mod_aale'));
-        $mform->setDefault('allow_track_selection', 1);
-        $mform->setType('allow_track_selection', PARAM_INT);
-        $mform->addHelpButton('allow_track_selection', 'allow_track_selection', 'mod_aale');
-
-        // Coins section.
-        $mform->addElement('header', 'coinsheader', get_string('coinssection', 'mod_aale'));
-
-        // Coins enabled.
-        $mform->addElement('advcheckbox', 'coins_enabled', get_string('coins_enabled', 'mod_aale'));
+        // Enable reward coins system.
+        $mform->addElement(
+            'advcheckbox', 'coins_enabled',
+            get_string('coins_enabled', 'mod_aale')
+        );
         $mform->setDefault('coins_enabled', 1);
         $mform->setType('coins_enabled', PARAM_INT);
         $mform->addHelpButton('coins_enabled', 'coins_enabled', 'mod_aale');
 
-        // Default coins per level.
-        $mform->addElement('textarea', 'default_coins_per_level', get_string('default_coins_per_level', 'mod_aale'),
-                array('rows' => 5, 'cols' => 60));
-        $mform->setDefault('default_coins_per_level', '{"1":5,"2":10,"3":15}');
-        $mform->setType('default_coins_per_level', PARAM_RAW);
-        $mform->addHelpButton('default_coins_per_level', 'default_coins_per_level', 'mod_aale');
-
-        // Standard Moodle footer elements.
+        // ── Standard Moodle footer elements ──────────────────────────────────
         $this->standard_grading_coursemodule_elements();
         $this->standard_coursemodule_elements();
-        $this->add_action_buttons();
+        $this->add_action_buttons(true, get_string('saveandreturn', 'mod_aale'));
     }
 
     /**
-     * Preprocess form data.
+     * Pre-process form data before displaying (decode JSON arrays back to arrays).
      *
-     * @param mixed $defaultvalues The form values.
+     * @param array $defaultvalues
      */
     public function data_preprocessing(&$defaultvalues) {
         parent::data_preprocessing($defaultvalues);
 
-        // Preprocess intro_text editor field.
-        if ($this->current_instance) {
-            $draftitemid = file_get_submitted_draft_itemid('intro_text');
-            $defaultvalues['intro_text']['text'] = file_prepare_draft_area(
-                $draftitemid,
-                $this->context->id,
-                'mod_aale',
-                'intro_text',
-                0,
-                array('subdirs' => true),
-                isset($defaultvalues['intro_text']) ? $defaultvalues['intro_text'] : ''
-            );
-            $defaultvalues['intro_text']['itemid'] = $draftitemid;
-            $defaultvalues['intro_text']['format'] = isset($defaultvalues['introformat']) ? $defaultvalues['introformat'] : FORMAT_HTML;
+        // Decode restrict_groups JSON → PHP array for multi-select.
+        if (!empty($defaultvalues['restrict_groups'])) {
+            $decoded = json_decode($defaultvalues['restrict_groups'], true);
+            if (is_array($decoded)) {
+                $defaultvalues['restrict_groups'] = $decoded;
+            }
+        }
+
+        // Decode restrict_users JSON → PHP array for multi-select.
+        if (!empty($defaultvalues['restrict_users'])) {
+            $decoded = json_decode($defaultvalues['restrict_users'], true);
+            if (is_array($decoded)) {
+                $defaultvalues['restrict_users'] = $decoded;
+            }
         }
     }
 
     /**
-     * Validate the form.
+     * Validate form data.
      *
-     * @param array $data The submitted form data.
-     * @param array $files The submitted files.
-     * @return array Array of validation errors.
+     * @param array $data  Submitted form data.
+     * @param array $files Submitted files.
+     * @return array Validation errors keyed by field name.
      */
     public function validation($data, $files) {
         $errors = parent::validation($data, $files);
 
-        // Validate max_bookings_per_student >= 1.
-        if (isset($data['max_bookings_per_student'])) {
-            $max_bookings = intval($data['max_bookings_per_student']);
-            if ($max_bookings < 1) {
-                $errors['max_bookings_per_student'] = get_string('err_max_bookings_min', 'mod_aale');
+        // Booking close must be after booking open.
+        if (!empty($data['bookingopen']) && !empty($data['bookingclose'])) {
+            if ($data['bookingclose'] <= $data['bookingopen']) {
+                $errors['bookingclose'] = get_string('error_closedatebeforeopen', 'mod_aale');
+            }
+        }
+
+        // If restrict_type = groups, at least one group must be chosen.
+        if (!empty($data['restrict_type']) && $data['restrict_type'] === 'groups') {
+            if (empty($data['restrict_groups'])) {
+                $errors['restrict_groups'] = get_string('error_nogroupselected', 'mod_aale');
+            }
+        }
+
+        // If restrict_type = individuals, at least one student must be chosen.
+        if (!empty($data['restrict_type']) && $data['restrict_type'] === 'individuals') {
+            if (empty($data['restrict_users'])) {
+                $errors['restrict_users'] = get_string('error_nousersselected', 'mod_aale');
             }
         }
 

@@ -21,10 +21,12 @@ defined('MOODLE_INTERNAL') || die();
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-define('AALE_OUTCOME_CLEARED',     'cleared');
-define('AALE_OUTCOME_TRY_AGAIN',   'try_again');
-define('AALE_OUTCOME_MALPRACTICE', 'malpractice');
-define('AALE_OUTCOME_IGNORE',      'ignore');
+// Outcome values — three possible results for CPA assessment.
+define('AALE_OUTCOME_WON',         'won');          // Student passed (all test cases / above pass %)
+define('AALE_OUTCOME_TRY_AGAIN',   'try_again');    // Student did not meet pass criteria
+define('AALE_OUTCOME_MALPRACTICE', 'malpractice');  // Malpractice observed by faculty
+// Backward-compat alias.
+define('AALE_OUTCOME_CLEARED',     'won');           // alias for older code references
 
 define('AALE_SESSION_FREEZE_SECS', 1800); // 30 minutes
 
@@ -32,132 +34,73 @@ define('AALE_BOOKING_STATUS_BOOKED',    'booked');
 define('AALE_BOOKING_STATUS_CANCELLED', 'cancelled');
 define('AALE_BOOKING_STATUS_ATTENDED',  'attended');
 define('AALE_BOOKING_STATUS_ABSENT',    'absent');
-
-define('AALE_WINDOW_STATUS_DRAFT',  'draft');
-define('AALE_WINDOW_STATUS_OPEN',   'open');
-define('AALE_WINDOW_STATUS_CLOSED', 'closed');
+define('AALE_BOOKING_STATUS_PRESENT',   'present');
 
 define('AALE_SLOT_MODE_CLASS', 'class');
 define('AALE_SLOT_MODE_CPA',   'cpa');
 
-define('AALE_COIN_TYPE_ASSESSMENT_CLEAR', 'assessment_clear');
-define('AALE_COIN_TYPE_REDEMPTION',       'redemption');
-define('AALE_COIN_TYPE_ADMIN_ADD',        'admin_add');
-define('AALE_COIN_TYPE_ADMIN_DEDUCT',     'admin_deduct');
+define('AALE_COIN_TYPE_ASSESSMENT_WON', 'assessment_won');
+define('AALE_COIN_TYPE_REDEMPTION',    'redemption');
+define('AALE_COIN_TYPE_ADMIN_ADD',     'admin_add');
+define('AALE_COIN_TYPE_ADMIN_DEDUCT',  'admin_deduct');
 
-define('AALE_SESSION_LABELS', ['FN1', 'FN2', 'AN1', 'AN2']);
-define('AALE_OUTCOME_FREEZE_MINS', 30);
-
-// ── Window helpers ────────────────────────────────────────────────────────────
+// ── Booking-window helpers (Layer 1 — stored on the aale record) ─────────────
 
 /**
- * Get all booking windows for an AALE instance.
+ * Check if the booking window for an AALE activity is currently open.
  *
- * @param  int    $aaleid
- * @param  string $status  Optional filter: draft|open|closed
- * @return array           Array of stdClass window records
- */
-function aale_get_windows(int $aaleid, string $status = ''): array {
-    global $DB;
-    $params = ['aaleid' => $aaleid];
-    if ($status !== '') {
-        $params['status'] = $status;
-    }
-    return array_values($DB->get_records('aale_windows', $params, 'bookingopen ASC'));
-}
-
-/**
- * Get a single window by ID, checking it belongs to the given AALE instance.
- *
- * @param  int $windowid
- * @param  int $aaleid
- * @return stdClass
- * @throws moodle_exception  if not found
- */
-function aale_get_window(int $windowid, int $aaleid): stdClass {
-    global $DB;
-    return $DB->get_record('aale_windows', ['id' => $windowid, 'aaleid' => $aaleid], '*', MUST_EXIST);
-}
-
-/**
- * Create a new booking window.
- *
- * @param  int    $aaleid
- * @param  string $name
- * @param  int    $bookingopen   Unix timestamp
- * @param  int    $bookingclose  Unix timestamp
- * @param  string $status        draft|open|closed
- * @return int    New window ID
- */
-function aale_create_window(int $aaleid, string $name, int $bookingopen, int $bookingclose, string $status = AALE_WINDOW_STATUS_DRAFT): int {
-    global $DB, $USER;
-    $record = (object)[
-        'aaleid'      => $aaleid,
-        'name'        => $name,
-        'bookingopen' => $bookingopen,
-        'bookingclose'=> $bookingclose,
-        'status'      => $status,
-        'timecreated' => time(),
-        'timemodified'=> time(),
-        'createdby'   => $USER->id,
-    ];
-    return $DB->insert_record('aale_windows', $record);
-}
-
-/**
- * Update an existing booking window.
- *
- * @param  int    $windowid
- * @param  array  $data  Associative array of fields to update
+ * @param  stdClass $aale  The aale activity record.
  * @return bool
  */
-function aale_update_window(int $windowid, array $data): bool {
-    global $DB;
-    $data['id']           = $windowid;
-    $data['timemodified'] = time();
-    return $DB->update_record('aale_windows', (object)$data);
-}
-
-/**
- * Delete a window and all its slots (and associated bookings/attendance/outcomes).
- *
- * @param  int $windowid
- * @return bool
- */
-function aale_delete_window(int $windowid): bool {
-    global $DB;
-    // Get all slots for this window.
-    $slotids = $DB->get_fieldset_select('aale_slots', 'id', 'windowid = ?', [$windowid]);
-    foreach ($slotids as $slotid) {
-        aale_delete_slot($slotid);
-    }
-    return $DB->delete_records('aale_windows', ['id' => $windowid]);
-}
-
-/**
- * Check if a student can still book within a window (window is open and time is valid).
- *
- * @param  stdClass $window
- * @return bool
- */
-function aale_window_is_bookable(stdClass $window): bool {
+function aale_window_is_open(stdClass $aale): bool {
     $now = time();
-    return $window->status === AALE_WINDOW_STATUS_OPEN
-        && $now >= $window->bookingopen
-        && $now <= $window->bookingclose;
+    return $aale->bookingopen > 0
+        && $aale->bookingclose > 0
+        && $now >= $aale->bookingopen
+        && $now <= $aale->bookingclose;
+}
+
+/**
+ * Check if a specific user is allowed to book in this activity
+ * (respects restrict_type / restrict_groups / restrict_users).
+ *
+ * @param  stdClass $aale
+ * @param  int      $userid
+ * @param  int      $courseid
+ * @return bool
+ */
+function aale_user_can_book(stdClass $aale, int $userid, int $courseid): bool {
+    if ($aale->restrict_type === 'all') {
+        return true;
+    }
+    if ($aale->restrict_type === 'groups') {
+        $allowed = json_decode($aale->restrict_groups ?? '[]', true);
+        $usergrps = array_keys(groups_get_user_groups($courseid, $userid)[0] ?? []);
+        return !empty(array_intersect($allowed, $usergrps));
+    }
+    if ($aale->restrict_type === 'individuals') {
+        $allowed = json_decode($aale->restrict_users ?? '[]', true);
+        return in_array($userid, $allowed);
+    }
+    return true;
 }
 
 // ── Slot helpers ──────────────────────────────────────────────────────────────
 
 /**
- * Get all slots for a given window.
+ * Get all active slots for an AALE activity.
  *
- * @param  int  $windowid
+ * @param  int    $aaleid
+ * @param  string $mode   Optional: 'class' | 'cpa' | '' (all)
  * @return array
  */
-function aale_get_slots(int $windowid): array {
+function aale_get_slots(int $aaleid, string $mode = ''): array {
     global $DB;
-    return array_values($DB->get_records('aale_slots', ['windowid' => $windowid], 'classdate ASC, timestart ASC'));
+    $params = ['aaleid' => $aaleid, 'status' => 'active'];
+    if ($mode !== '') {
+        $params['slotmode'] = $mode;
+    }
+    return array_values($DB->get_records('aale_slots', $params, 'classdate ASC'));
 }
 
 /**
@@ -172,31 +115,25 @@ function aale_get_slot(int $slotid): stdClass {
 }
 
 /**
- * Create a new slot (Layer 2 details).
+ * Create a new slot.
  *
- * @param  int      $windowid
+ * @param  int      $aaleid
  * @param  stdClass $data  All slot fields
  * @return int      New slot ID
  */
-function aale_create_slot(int $windowid, stdClass $data): int {
+function aale_create_slot(int $aaleid, stdClass $data): int {
     global $DB, $USER;
-    $data->windowid    = $windowid;
-    $data->timecreated = time();
-    $data->timemodified= time();
-    $data->createdby   = $USER->id;
+    $data->aaleid       = $aaleid;
+    $data->timecreated  = time();
+    $data->timemodified = time();
+    $data->createdby    = $USER->id;
 
     // Encode JSON fields if passed as arrays.
-    if (is_array($data->att_sessions ?? null)) {
-        $data->att_sessions = json_encode($data->att_sessions);
-    }
     if (is_array($data->available_levels ?? null)) {
         $data->available_levels = json_encode($data->available_levels);
     }
     if (is_array($data->coins_per_level ?? null)) {
         $data->coins_per_level = json_encode($data->coins_per_level);
-    }
-    if (is_array($data->available_tracks ?? null)) {
-        $data->available_tracks = json_encode($data->available_tracks);
     }
 
     return $DB->insert_record('aale_slots', $data);
@@ -214,17 +151,11 @@ function aale_update_slot(int $slotid, stdClass $data): bool {
     $data->id           = $slotid;
     $data->timemodified = time();
 
-    if (isset($data->att_sessions) && is_array($data->att_sessions)) {
-        $data->att_sessions = json_encode($data->att_sessions);
-    }
     if (isset($data->available_levels) && is_array($data->available_levels)) {
         $data->available_levels = json_encode($data->available_levels);
     }
     if (isset($data->coins_per_level) && is_array($data->coins_per_level)) {
         $data->coins_per_level = json_encode($data->coins_per_level);
-    }
-    if (isset($data->available_tracks) && is_array($data->available_tracks)) {
-        $data->available_tracks = json_encode($data->available_tracks);
     }
 
     return $DB->update_record('aale_slots', $data);
@@ -261,7 +192,7 @@ function aale_slot_remaining_capacity(int $slotid): int {
     global $DB;
     $slot  = aale_get_slot($slotid);
     $count = $DB->count_records('aale_bookings', ['slotid' => $slotid, 'status' => AALE_BOOKING_STATUS_BOOKED]);
-    return (int)$slot->maxstudents - $count;
+    return (int)$slot->totalslots - $count;
 }
 
 /**
@@ -271,7 +202,8 @@ function aale_slot_remaining_capacity(int $slotid): int {
  * @return stdClass  same object, JSON fields replaced with arrays
  */
 function aale_decode_slot_json(stdClass $slot): stdClass {
-    foreach (['att_sessions', 'available_levels', 'coins_per_level', 'available_tracks'] as $f) {
+    // att_sessions is now an integer count, not JSON — skip it.
+    foreach (['available_levels', 'coins_per_level'] as $f) {
         if (!empty($slot->$f) && is_string($slot->$f)) {
             $slot->$f = json_decode($slot->$f, true) ?? [];
         } elseif (empty($slot->$f)) {
@@ -284,24 +216,27 @@ function aale_decode_slot_json(stdClass $slot): stdClass {
 // ── Booking helpers ───────────────────────────────────────────────────────────
 
 /**
- * Check if a student already has a booking in a given window.
+ * Check if a student already has an active booking for a given slot.
  *
- * @param  int $windowid
+ * @param  int $slotid
  * @param  int $userid
  * @return stdClass|false  Existing booking or false
  */
-function aale_get_booking_in_window(int $windowid, int $userid) {
+function aale_get_existing_booking(int $slotid, int $userid) {
     global $DB;
-    return $DB->get_record('aale_bookings', ['windowid' => $windowid, 'userid' => $userid]);
+    return $DB->get_record_select(
+        'aale_bookings',
+        "slotid = ? AND userid = ? AND status != ?",
+        [$slotid, $userid, AALE_BOOKING_STATUS_CANCELLED]
+    );
 }
 
 /**
  * Book a student into a slot.
  *
- * Enforces the one-booking-per-window constraint and slot capacity.
- * For CPA slots, assigns questions from the pool.
+ * Enforces one-booking-per-slot-per-student and capacity constraints.
  *
- * @param  int    $windowid
+ * @param  int    $aaleid
  * @param  int    $slotid
  * @param  int    $userid
  * @param  int    $level_selected   (CPA only)
@@ -309,45 +244,41 @@ function aale_get_booking_in_window(int $windowid, int $userid) {
  * @return int    Booking ID
  * @throws moodle_exception  on constraint violation
  */
-function aale_book_slot(int $windowid, int $slotid, int $userid, int $level_selected = 0, string $track_selected = ''): int {
+function aale_book_slot(int $aaleid, int $slotid, int $userid, int $level_selected = 0, string $track_selected = ''): int {
     global $DB;
 
-    // Verify window is bookable.
-    $window = $DB->get_record('aale_windows', ['id' => $windowid], '*', MUST_EXIST);
-    if (!aale_window_is_bookable($window)) {
-        throw new moodle_exception('error_window_not_open', 'mod_aale');
+    // Verify slot belongs to this activity and is active.
+    $slot = $DB->get_record('aale_slots', ['id' => $slotid, 'aaleid' => $aaleid, 'status' => 'active'], '*', MUST_EXIST);
+
+    // Verify booking window is open.
+    $aale = $DB->get_record('aale', ['id' => $aaleid], '*', MUST_EXIST);
+    if (!aale_window_is_open($aale)) {
+        throw new moodle_exception('error_bookingclosed', 'mod_aale');
     }
 
-    // Enforce one-per-window.
-    if (aale_get_booking_in_window($windowid, $userid)) {
-        throw new moodle_exception('error_already_booked', 'mod_aale');
+    // Enforce one booking per student per slot (DB unique index also guards this).
+    if (aale_get_existing_booking($slotid, $userid)) {
+        throw new moodle_exception('error_alreadybooked', 'mod_aale');
     }
 
     // Check capacity.
     if (aale_slot_remaining_capacity($slotid) <= 0) {
-        throw new moodle_exception('error_slot_full', 'mod_aale');
+        throw new moodle_exception('error_slotfull', 'mod_aale');
     }
 
-    $slot = aale_get_slot($slotid);
-
     $booking = (object)[
-        'windowid'          => $windowid,
-        'slotid'            => $slotid,
-        'userid'            => $userid,
-        'level_selected'    => $level_selected,
-        'track_selected'    => $track_selected,
-        'questions_assigned'=> '[]',
-        'status'            => AALE_BOOKING_STATUS_BOOKED,
-        'timecreated'       => time(),
-        'timemodified'      => time(),
+        'aaleid'             => $aaleid,
+        'slotid'             => $slotid,
+        'userid'             => $userid,
+        'level_selected'     => $level_selected,
+        'track_selected'     => $track_selected,
+        'questions_assigned' => '[]',
+        'status'             => AALE_BOOKING_STATUS_BOOKED,
+        'timecreated'        => time(),
+        'timemodified'       => time(),
     ];
 
     $bookingid = $DB->insert_record('aale_bookings', $booking);
-
-    // For CPA slots, assign questions immediately.
-    if ($slot->slotmode === AALE_SLOT_MODE_CPA && $level_selected > 0 && $track_selected !== '') {
-        aale_assign_questions($bookingid, $slot, $level_selected, $track_selected);
-    }
 
     // Queue booking confirmation notification.
     aale_queue_notification($bookingid, 'booking_confirmed');
@@ -362,19 +293,28 @@ function aale_book_slot(int $windowid, int $slotid, int $userid, int $level_sele
  * @param  bool $byadmin
  * @return bool
  */
-function aale_cancel_booking(int $bookingid, bool $byadmin = false): bool {
+/**
+ * Cancel a booking.
+ *
+ * @param  int      $bookingid
+ * @param  int      $requestinguid  User requesting cancellation (0 = system/admin).
+ * @param  stdClass $aale           AALE activity record (for window check).
+ * @return bool
+ * @throws moodle_exception
+ */
+function aale_cancel_booking(int $bookingid, int $requestinguid = 0, ?stdClass $aale = null): bool {
     global $DB, $USER;
 
     $booking = $DB->get_record('aale_bookings', ['id' => $bookingid], '*', MUST_EXIST);
+    $uid     = $requestinguid ?: $USER->id;
 
-    // Students can only cancel their own and only if window is still open.
-    if (!$byadmin) {
-        if ($booking->userid != $USER->id) {
-            throw new moodle_exception('error_not_your_booking', 'mod_aale');
+    // Students can only cancel their own bookings while the window is open.
+    if ($uid == $booking->userid) {
+        if ($aale === null) {
+            $aale = $DB->get_record('aale', ['id' => $booking->aaleid], '*', MUST_EXIST);
         }
-        $window = $DB->get_record('aale_windows', ['id' => $booking->windowid], '*', MUST_EXIST);
-        if (!aale_window_is_bookable($window)) {
-            throw new moodle_exception('error_window_closed', 'mod_aale');
+        if (!aale_window_is_open($aale)) {
+            throw new moodle_exception('error_bookingclosed', 'mod_aale');
         }
     }
 
@@ -405,14 +345,13 @@ function aale_get_slot_bookings(int $slotid): array {
  */
 function aale_get_user_bookings(int $aaleid, int $userid): array {
     global $DB;
-    $sql = "SELECT b.*, w.name AS windowname, s.classdate, s.timestart, s.timeend,
-                   s.slotmode, s.teacherid, s.venue
+    $sql = "SELECT b.*, s.classdate, s.classtime, s.slotmode, s.teacherid, s.venue,
+                   s.track, s.show_faculty_to_students
               FROM {aale_bookings} b
-              JOIN {aale_windows} w ON w.id = b.windowid
-              JOIN {aale_slots}   s ON s.id = b.slotid
-             WHERE w.aaleid = ? AND b.userid = ?
-             ORDER BY s.classdate ASC, s.timestart ASC";
-    return array_values($DB->get_records_sql($sql, [$aaleid, $userid]));
+              JOIN {aale_slots}    s ON s.id = b.slotid
+             WHERE b.aaleid = ? AND b.userid = ? AND b.status != ?
+             ORDER BY s.classdate ASC";
+    return array_values($DB->get_records_sql($sql, [$aaleid, $userid, AALE_BOOKING_STATUS_CANCELLED]));
 }
 
 // ── Attendance helpers ────────────────────────────────────────────────────────
@@ -446,23 +385,16 @@ function aale_get_all_attendance(int $bookingid): array {
 }
 
 /**
- * Mark attendance for a session.
+ * Mark attendance for a booking+session.
  *
- * @param  int  $slotid
- * @param  int  $userid
- * @param  int  $session_number  1–16
- * @param  string $status        present|absent
+ * @param  int $bookingid
+ * @param  int $session_number  1–20
+ * @param  int $present         1 = Present, 0 = Absent
+ * @param  int $markedby        User ID of faculty
  * @return bool  false if already frozen
  */
-function aale_mark_attendance(int $slotid, int $userid, int $session_number, string $status): bool {
-    global $DB, $USER;
-
-    $booking = $DB->get_record('aale_bookings', ['slotid' => $slotid, 'userid' => $userid], '*', IGNORE_MISSING);
-    if (!$booking) {
-        return false;
-    }
-
-    $bookingid = $booking->id;
+function aale_mark_attendance(int $bookingid, int $session_number, int $present, int $markedby): bool {
+    global $DB;
 
     // Check if session is frozen for this booking.
     $existing = aale_get_attendance($bookingid, $session_number);
@@ -470,16 +402,12 @@ function aale_mark_attendance(int $slotid, int $userid, int $session_number, str
         return false;
     }
 
-    // Determine session label from session number.
-    $label = aale_session_label($session_number);
-
     $data = (object)[
         'bookingid'      => $bookingid,
         'session_number' => $session_number,
-        'session_label'  => $label,
-        'present'        => ($status === 'present') ? 1 : 0,
+        'present'        => $present,
         'frozen'         => 0,
-        'markedby'       => $USER->id,
+        'markedby'       => $markedby,
         'timemodified'   => time(),
     ];
 
@@ -537,15 +465,39 @@ function aale_freeze_attendance(int $bookingid, int $session_number): bool {
  *
  * @param  int $slotid
  * @param  int $session_number
+ * @param  int $frozenby  User ID performing the freeze (0 = use $USER->id)
  * @return int  Number of records frozen
  */
-function aale_freeze_slot_session(int $slotid, int $session_number): int {
+function aale_freeze_slot_session(int $slotid, int $session_number, int $frozenby = 0): int {
     global $DB, $USER;
+    $frozenby = $frozenby ?: $USER->id;
     $bookingids = $DB->get_fieldset_select('aale_bookings', 'id', 'slotid = ? AND status != ?',
         [$slotid, AALE_BOOKING_STATUS_CANCELLED]);
     $count = 0;
     foreach ($bookingids as $bid) {
-        if (aale_freeze_attendance($bid, $session_number)) {
+        $existing = aale_get_attendance($bid, $session_number);
+        if ($existing && !$existing->frozen) {
+            $DB->update_record('aale_attendance', (object)[
+                'id'           => $existing->id,
+                'frozen'       => 1,
+                'frozenby'     => $frozenby,
+                'frozenat'     => time(),
+                'timemodified' => time(),
+            ]);
+            $count++;
+        } elseif (!$existing) {
+            // Create a frozen absent record so it can't be filled in later.
+            $DB->insert_record('aale_attendance', (object)[
+                'bookingid'      => $bid,
+                'session_number' => $session_number,
+                'present'        => 0,
+                'frozen'         => 1,
+                'markedby'       => $frozenby,
+                'frozenby'       => $frozenby,
+                'frozenat'       => time(),
+                'timecreated'    => time(),
+                'timemodified'   => time(),
+            ]);
             $count++;
         }
     }
@@ -597,51 +549,68 @@ function aale_get_outcome(int $bookingid) {
  * @return bool   false if outcome is already frozen
  * @throws moodle_exception  on invalid outcome
  */
-function aale_set_outcome(int $bookingid, string $outcome, int $markedby, string $notes = ''): bool {
+/**
+ * Set or update an outcome for a CPA booking.
+ *
+ * @param  int      $bookingid
+ * @param  string   $outcome    won | try_again | malpractice
+ * @param  int      $markedby   Faculty user ID
+ * @param  stdClass $slot       Slot record (for coins config)
+ * @param  stdClass $aale       AALE instance record (for coins_enabled)
+ * @param  string   $notes      Optional notes
+ * @return bool   false if outcome is already frozen
+ */
+function aale_set_outcome(int $bookingid, string $outcome, int $markedby, ?stdClass $slot = null, ?stdClass $aale = null, string $notes = ''): bool {
     global $DB;
 
-    $valid = [AALE_OUTCOME_CLEARED, AALE_OUTCOME_TRY_AGAIN, AALE_OUTCOME_MALPRACTICE, AALE_OUTCOME_IGNORE];
+    $valid = [AALE_OUTCOME_WON, AALE_OUTCOME_TRY_AGAIN, AALE_OUTCOME_MALPRACTICE];
     if (!in_array($outcome, $valid, true)) {
-        throw new moodle_exception('error_invalid_outcome', 'mod_aale');
+        throw new moodle_exception('error_invalidoutcome', 'mod_aale');
     }
 
     $existing = aale_get_outcome($bookingid);
 
     if ($existing) {
-        // Cannot change a frozen outcome (unless admin override).
         if ($existing->frozen) {
             return false;
         }
-
-        // Audit trail: save previous outcome.
+        $now = time();
         $DB->update_record('aale_outcomes', (object)[
             'id'            => $existing->id,
             'prev_outcome'  => $existing->outcome,
             'outcome'       => $outcome,
             'notes'         => $notes,
-            'setat'         => time(),
-            'freezeat'      => time() + AALE_SESSION_FREEZE_SECS,
-            'markedby'      => $markedby,
-            'frozen'        => 0,
-            'timemodified'  => time(),
-        ]);
-    } else {
-        $now = time();
-        $DB->insert_record('aale_outcomes', (object)[
-            'bookingid'     => $bookingid,
-            'outcome'       => $outcome,
-            'prev_outcome'  => null,
-            'notes'         => $notes,
             'setat'         => $now,
             'freezeat'      => $now + AALE_SESSION_FREEZE_SECS,
             'markedby'      => $markedby,
             'frozen'        => 0,
-            'admin_override'=> 0,
-            'overrideby'    => null,
-            'overrideat'    => null,
-            'timecreated'   => $now,
             'timemodified'  => $now,
         ]);
+    } else {
+        $now = time();
+        $DB->insert_record('aale_outcomes', (object)[
+            'bookingid'               => $bookingid,
+            'outcome'                 => $outcome,
+            'prev_outcome'            => '',
+            'notes'                   => $notes,
+            'assessment_triggered'    => 0,
+            'assessment_triggered_at' => 0,
+            'coins_awarded'           => 0,
+            'setat'                   => $now,
+            'freezeat'                => $now + AALE_SESSION_FREEZE_SECS,
+            'markedby'                => $markedby,
+            'frozen'                  => 0,
+            'admin_override'          => 0,
+            'overrideby'              => 0,
+            'overrideat'              => 0,
+            'timecreated'             => $now,
+            'timemodified'            => $now,
+        ]);
+    }
+
+    // Award coins immediately when Won is set (if slot and aale provided).
+    if ($outcome === AALE_OUTCOME_WON && $slot !== null && $aale !== null && !empty($aale->coins_enabled)) {
+        aale_award_coins_for_booking($bookingid, $slot, $aale);
     }
 
     return true;
@@ -711,9 +680,9 @@ function aale_process_frozen_outcomes(): int {
         // Queue outcome notification email.
         aale_queue_notification($out->bookingid, 'outcome_frozen', ['outcome' => $out->outcome]);
 
-        // Award coins if outcome is 'cleared'.
-        if ($out->outcome === AALE_OUTCOME_CLEARED) {
-            aale_award_coins_for_outcome($out->bookingid);
+        // Award coins if outcome is Won — coins are given on freeze.
+        if ($out->outcome === AALE_OUTCOME_WON) {
+            aale_award_coins_for_booking_by_id($out->bookingid);
         }
 
         $count++;
@@ -792,22 +761,21 @@ function aale_get_enrolled_teachers(int $courseid): array {
     return get_enrolled_users($context, 'moodle/course:update'); // Usually teachers have this cap
 }
 /**
- * Award coins to a student when an outcome is frozen as 'cleared'.
+ * Award coins for a Won outcome. Called directly with slot/aale records.
  *
- * @param  int $bookingid
- * @return bool  false if no coins configured for this level
+ * @param  int      $bookingid
+ * @param  stdClass $slot
+ * @param  stdClass $aale
+ * @return bool
  */
-function aale_award_coins_for_outcome(int $bookingid): bool {
+function aale_award_coins_for_booking(int $bookingid, stdClass $slot, stdClass $aale): bool {
     global $DB;
 
-    $booking = $DB->get_record('aale_bookings', ['id' => $bookingid], '*', MUST_EXIST);
-    $slot    = aale_get_slot($booking->slotid);
-    $slot    = aale_decode_slot_json($slot);
-    $window  = $DB->get_record('aale_windows', ['id' => $booking->windowid], '*', MUST_EXIST);
-
-    // Get coins configured for the student's level.
-    $coinsmap = $slot->coins_per_level; // array ['1' => 10, '2' => 15, ...]
+    $booking  = $DB->get_record('aale_bookings', ['id' => $bookingid], '*', MUST_EXIST);
+    $decoded  = aale_decode_slot_json(clone $slot);
+    $coinsmap = $decoded->coins_per_level; // ['1' => 10, '2' => 15, ...]
     $level    = (string)$booking->level_selected;
+
     if (!isset($coinsmap[$level])) {
         return false;
     }
@@ -818,14 +786,41 @@ function aale_award_coins_for_outcome(int $bookingid): bool {
     }
 
     aale_add_coin_transaction(
-        $window->aaleid,
+        $aale->id,
         $booking->userid,
         $amount,
-        AALE_COIN_TYPE_ASSESSMENT_CLEAR,
-        get_string('coins_earned_cleared', 'mod_aale', (object)['level' => $level, 'amount' => $amount]),
+        AALE_COIN_TYPE_ASSESSMENT_WON,
+        'Won — Level ' . $level . ' — ' . $amount . ' coins',
         $bookingid
     );
+
+    // Record coins_awarded on the outcome row.
+    $outrec = $DB->get_record('aale_outcomes', ['bookingid' => $bookingid]);
+    if ($outrec) {
+        $DB->set_field('aale_outcomes', 'coins_awarded', $amount, ['id' => $outrec->id]);
+    }
+
     return true;
+}
+
+/**
+ * Award coins by booking ID only (used by scheduled task after freeze).
+ *
+ * @param  int $bookingid
+ * @return bool
+ */
+function aale_award_coins_for_booking_by_id(int $bookingid): bool {
+    global $DB;
+    $booking = $DB->get_record('aale_bookings', ['id' => $bookingid], '*', IGNORE_MISSING);
+    if (!$booking) {
+        return false;
+    }
+    $slot = $DB->get_record('aale_slots', ['id' => $booking->slotid], '*', IGNORE_MISSING);
+    $aale = $DB->get_record('aale',       ['id' => $booking->aaleid], '*', IGNORE_MISSING);
+    if (!$slot || !$aale || empty($aale->coins_enabled)) {
+        return false;
+    }
+    return aale_award_coins_for_booking($bookingid, $slot, $aale);
 }
 
 
@@ -878,6 +873,71 @@ function aale_admin_deduct_coins(int $aaleid, int $userid, int $amount, string $
         return false;
     }
     aale_add_coin_transaction($aaleid, $userid, -$amount, AALE_COIN_TYPE_ADMIN_DEDUCT, $notes);
+    return true;
+}
+
+// ── CPA Assessment trigger ────────────────────────────────────────────────────
+
+/**
+ * Trigger assessment for a student immediately after being marked Present.
+ *
+ * - Assigns random questions based on their level and the slot's track.
+ * - Creates an outcome record with assessment_triggered = 1.
+ * - Should be called ONLY once per booking.
+ *
+ * @param  stdClass $booking  Booking record
+ * @param  stdClass $slot     Slot record
+ * @param  stdClass $aale     AALE instance record
+ * @param  int      $triggeredby  User ID of faculty who triggered (marked present)
+ * @return bool
+ */
+function aale_trigger_assessment(stdClass $booking, stdClass $slot, stdClass $aale, int $triggeredby): bool {
+    global $DB;
+
+    // Idempotency guard: only trigger once.
+    $existing = aale_get_outcome($booking->id);
+    if ($existing && $existing->assessment_triggered) {
+        return false; // Already triggered.
+    }
+
+    $now = time();
+
+    // Assign questions from the bank.
+    $level = (int)$booking->level_selected;
+    $track = $booking->track_selected ?: $slot->track;
+    if ($level > 0 && !empty($track)) {
+        aale_assign_questions($booking->id, $slot, $level, $track);
+    }
+
+    // Create or update outcome row with triggered flag.
+    if ($existing) {
+        $DB->update_record('aale_outcomes', (object)[
+            'id'                      => $existing->id,
+            'assessment_triggered'    => 1,
+            'assessment_triggered_at' => $now,
+            'timemodified'            => $now,
+        ]);
+    } else {
+        $DB->insert_record('aale_outcomes', (object)[
+            'bookingid'               => $booking->id,
+            'outcome'                 => '',
+            'prev_outcome'            => '',
+            'notes'                   => '',
+            'assessment_triggered'    => 1,
+            'assessment_triggered_at' => $now,
+            'coins_awarded'           => 0,
+            'setat'                   => 0,
+            'freezeat'                => 0,
+            'markedby'                => $triggeredby,
+            'frozen'                  => 0,
+            'admin_override'          => 0,
+            'overrideby'              => 0,
+            'overrideat'              => 0,
+            'timecreated'             => $now,
+            'timemodified'            => $now,
+        ]);
+    }
+
     return true;
 }
 
@@ -1099,7 +1159,8 @@ function aale_notification_body(string $type, stdClass $user, ?stdClass $booking
         case 'booking_confirmed':
             if ($booking) {
                 $slot = $DB->get_record('aale_slots', ['id' => $booking->slotid]);
-                $date = $slot ? userdate($slot->classdate) : '';
+                // classdate is now a display string, not a unix timestamp.
+                $date = $slot ? format_string($slot->classdate) : '';
                 return get_string('email_body_booking_confirmed', 'mod_aale',
                     (object)['name' => $firstname, 'date' => $date]);
             }
@@ -1107,13 +1168,13 @@ function aale_notification_body(string $type, stdClass $user, ?stdClass $booking
 
         case 'outcome_frozen':
             $outcome = $extra['outcome'] ?? '';
-            return get_string('email_body_outcome_frozen_' . $outcome, 'mod_aale',
-                (object)['name' => $firstname]);
+            $strkey  = 'email_body_outcome_frozen_' . $outcome;
+            return get_string($strkey, 'mod_aale', (object)['name' => $firstname]);
 
         case 'reminder':
             if ($booking) {
                 $slot = $DB->get_record('aale_slots', ['id' => $booking->slotid]);
-                $date = $slot ? userdate($slot->classdate) : '';
+                $date = $slot ? format_string($slot->classdate) : '';
                 return get_string('email_body_reminder', 'mod_aale',
                     (object)['name' => $firstname, 'date' => $date]);
             }
@@ -1189,10 +1250,9 @@ function aale_slot_outcome_summary(int $slotid): array {
     global $DB;
 
     $summary = [
-        'cleared'     => 0,
+        'won'         => 0,
         'try_again'   => 0,
         'malpractice' => 0,
-        'ignore'      => 0,
         'pending'     => 0,
     ];
 
@@ -1288,71 +1348,37 @@ function aale_render_admin_dashboard($cm, $aale, $context) {
     $html = '';
 
     // Get counts for summary.
-    $windowcount = $DB->count_records('aale_windows', ['aaleid' => $aale->id]);
-    $openwindowcount = $DB->count_records_select('aale_windows',
-        'aaleid = ? AND status = ?', [$aale->id, AALE_WINDOW_STATUS_OPEN]);
+    $slotcount    = $DB->count_records('aale_slots',    ['aaleid' => $aale->id, 'status' => 'active']);
     $bookingcount = $DB->count_records('aale_bookings', ['aaleid' => $aale->id]);
-    $pendingoutcomecount = $DB->count_records_select('aale_outcomes',
-        'aaleid = ? AND status = ?', [$aale->id, 'pending']);
+    // Count outcomes with no outcome set (pending = triggered but not yet marked).
+    $pendingoutcomecount = $DB->count_records_sql(
+        "SELECT COUNT(o.id) FROM {aale_outcomes} o
+          JOIN {aale_bookings} b ON b.id = o.bookingid
+         WHERE b.aaleid = ? AND o.outcome = '' AND o.assessment_triggered = 1",
+        [$aale->id]
+    );
 
     // Summary section.
     $html .= '<div class="aale-admin-summary">';
     $html .= '<h2>' . get_string('admindashboard', 'mod_aale') . '</h2>';
     $html .= '<div class="row">';
-    $html .= '<div class="col-md-3"><div class="alert alert-info">';
-    $html .= '<strong>' . $windowcount . '</strong> ' . get_string('totalwindows', 'mod_aale');
+    $html .= '<div class="col-md-4"><div class="alert alert-info">';
+    $html .= '<strong>' . $slotcount . '</strong> ' . get_string('totalslots', 'mod_aale');
     $html .= '</div></div>';
-    $html .= '<div class="col-md-3"><div class="alert alert-success">';
-    $html .= '<strong>' . $openwindowcount . '</strong> ' . get_string('openwindows', 'mod_aale');
-    $html .= '</div></div>';
-    $html .= '<div class="col-md-3"><div class="alert alert-warning">';
+    $html .= '<div class="col-md-4"><div class="alert alert-warning">';
     $html .= '<strong>' . $bookingcount . '</strong> ' . get_string('totalbookings', 'mod_aale');
     $html .= '</div></div>';
-    $html .= '<div class="col-md-3"><div class="alert alert-danger">';
+    $html .= '<div class="col-md-4"><div class="alert alert-danger">';
     $html .= '<strong>' . $pendingoutcomecount . '</strong> ' . get_string('pendingoutcomes', 'mod_aale');
     $html .= '</div></div>';
     $html .= '</div>';
     $html .= '</div>';
 
-    // Tabbed navigation.
-    $html .= '<div class="nav-tabs-wrapper">';
-    $html .= '<ul class="nav nav-tabs" role="tablist">';
-    $html .= '<li role="presentation" class="active"><a href="#windows" aria-controls="windows" role="tab" data-toggle="tab">' . get_string('windows', 'mod_aale') . '</a></li>';
-    $html .= '<li role="presentation"><a href="#slots" aria-controls="slots" role="tab" data-toggle="tab">' . get_string('slots', 'mod_aale') . '</a></li>';
-    $html .= '<li role="presentation"><a href="#outcomes" aria-controls="outcomes" role="tab" data-toggle="tab">' . get_string('outcomes', 'mod_aale') . '</a></li>';
-    $html .= '<li role="presentation"><a href="#coins" aria-controls="coins" role="tab" data-toggle="tab">' . get_string('coins', 'mod_aale') . '</a></li>';
-    $html .= '<li role="presentation"><a href="#report" aria-controls="report" role="tab" data-toggle="tab">' . get_string('report', 'mod_aale') . '</a></li>';
-    $html .= '</ul>';
-    $html .= '</div>';
-
-    // Tab content.
-    $html .= '<div class="tab-content">';
-
-    // Windows tab.
-    $html .= '<div role="tabpanel" class="tab-pane active" id="windows">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/admin/windows.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('managewindows', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
-    // Slots tab.
-    $html .= '<div role="tabpanel" class="tab-pane" id="slots">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/admin/slots.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('manageslots', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
-    // Outcomes tab.
-    $html .= '<div role="tabpanel" class="tab-pane" id="outcomes">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/admin/outcomes.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('manageoutcomes', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
-    // Coins tab.
-    $html .= '<div role="tabpanel" class="tab-pane" id="coins">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/admin/coins.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('managecoins', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
-    // Report tab.
-    $html .= '<div role="tabpanel" class="tab-pane" id="report">';
-    $html .= '<a href="' . new moodle_url('/mod/aale/admin/report.php', ['id' => $cm->id]) . '" class="btn btn-primary">' . get_string('viewreport', 'mod_aale') . '</a>';
-    $html .= '</div>';
-
+    // Quick-action buttons.
+    $html .= '<div class="mt-3 mb-4">';
+    $html .= '<a href="' . new moodle_url('/mod/aale/admin/slots.php',         ['id' => $cm->id]) . '" class="btn btn-primary mr-2">' . get_string('manageslots',  'mod_aale') . '</a>';
+    $html .= '<a href="' . new moodle_url('/mod/aale/admin/create_slot.php',   ['id' => $cm->id]) . '" class="btn btn-success mr-2">' . get_string('createnewslot', 'mod_aale') . '</a>';
+    $html .= '<a href="' . new moodle_url('/mod/aale/admin/coins.php',         ['id' => $cm->id]) . '" class="btn btn-warning mr-2">' . get_string('managecoins',  'mod_aale') . '</a>';
     $html .= '</div>';
 
     return $html;
@@ -1371,14 +1397,16 @@ function aale_render_faculty_dashboard($cm, $aale, $context) {
 
     $html = '';
 
-    // Get assigned slots for upcoming.
-    $slots = $DB->get_records_select('aale_slots',
-        'windowid IN (SELECT id FROM {aale_windows} WHERE aaleid = ?) AND teacherid = ? AND classdate >= ?',
-        [$aale->id, $USER->id, time() - 86400],
-        'classdate ASC, timestart ASC',
+    // Get assigned active slots for this faculty member.
+    $slots = $DB->get_records_select(
+        'aale_slots',
+        'aaleid = ? AND teacherid = ? AND status = ?',
+        [$aale->id, $USER->id, 'active'],
+        'classdate ASC',
         '*',
         0,
-        10);
+        10
+    );
 
     // Summary section.
     $html .= '<div class="aale-faculty-summary">';
@@ -1393,8 +1421,9 @@ function aale_render_faculty_dashboard($cm, $aale, $context) {
         $html .= '<ul class="list-group">';
         foreach ($slots as $slot) {
             $html .= '<li class="list-group-item">';
-            $html .= '<strong>' . userdate($slot->classdate, '%A, %d %B %Y') . '</strong> ';
-            $html .= ' (' . $slot->slotmode . ') - Room: ' . $slot->venue;
+            $html .= '<strong>' . format_string($slot->classdate) . '</strong> ';
+            $html .= ' (' . $slot->classtime . ') — ' . format_string($slot->venue);
+            $html .= ' [' . strtoupper($slot->slotmode) . ']';
             $html .= '</li>';
         }
         $html .= '</ul>';
@@ -1428,9 +1457,9 @@ function aale_render_faculty_dashboard($cm, $aale, $context) {
             }
             
             $table->data[] = [
-                userdate($slot->classdate, '%d %b %Y'),
+                format_string($slot->classdate) . ' ' . format_string($slot->classtime),
                 ucfirst($slot->slotmode),
-                $slot->venue,
+                format_string($slot->venue),
                 $actions
             ];
         }
@@ -1461,12 +1490,8 @@ function aale_render_student_dashboard($cm, $aale, $context) {
     // Get student's coin balance.
     $coinbalance = aale_get_coin_balance($aale->id, $USER->id);
 
-    // Count available open windows.
-    $windows = aale_get_windows($aale->id, AALE_WINDOW_STATUS_OPEN);
-    $openwindowcount = 0;
-    foreach ($windows as $w) {
-        if (aale_window_is_bookable($w)) $openwindowcount++;
-    }
+    // Is the booking window currently open?
+    $window_open = aale_window_is_open($aale) ? 1 : 0;
 
     // Summary section.
     $html .= '<div class="aale-student-summary">';
@@ -1478,8 +1503,10 @@ function aale_render_student_dashboard($cm, $aale, $context) {
     $html .= '<div class="col-md-4"><div class="alert alert-success shadow-sm">';
     $html .= '<strong>' . $coinbalance . '</strong> ' . get_string('totalcoins', 'mod_aale');
     $html .= '</div></div>';
-    $html .= '<div class="col-md-4"><div class="alert alert-warning shadow-sm">';
-    $html .= '<strong>' . $openwindowcount . '</strong> ' . get_string('status_open', 'mod_aale');
+    $html .= '<div class="col-md-4"><div class="alert ' . ($window_open ? 'alert-success' : 'alert-secondary') . ' shadow-sm">';
+    $html .= $window_open
+        ? get_string('bookingopen_now', 'mod_aale')
+        : get_string('bookingclosed',   'mod_aale');
     $html .= '</div></div>';
     $html .= '</div>';
 
@@ -1494,11 +1521,16 @@ function aale_render_student_dashboard($cm, $aale, $context) {
         $table = new html_table();
         $table->head = [get_string('date', 'mod_aale'), get_string('teacher', 'mod_aale'), get_string('venue', 'mod_aale'), get_string('status', 'mod_aale')];
         foreach ($bookings as $booking) {
-            $teacher = $DB->get_record('user', ['id' => $booking->teacherid]);
+            // Show faculty only if slot allows it.
+            $teachercol = '–';
+            if (!empty($booking->show_faculty_to_students)) {
+                $teacher    = $DB->get_record('user', ['id' => $booking->teacherid]);
+                $teachercol = $teacher ? fullname($teacher) : '–';
+            }
             $table->data[] = [
-                userdate($booking->classdate, '%d %b %Y'),
-                fullname($teacher),
-                $booking->venue,
+                format_string($booking->classdate) . ' ' . format_string($booking->classtime),
+                $teachercol,
+                format_string($booking->venue),
                 ucfirst($booking->status)
             ];
         }

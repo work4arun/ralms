@@ -46,17 +46,39 @@
             padding: 3rem;
             border-radius: 24px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
-            animation: fadeIn 0.6s ease-out;
+            opacity: 0;
+            animation: cardEntrance 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            will-change: transform, opacity, filter;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        @keyframes cardEntrance {
+            0% { 
+                opacity: 0; 
+                transform: translateY(40px) scale(0.94); 
+                filter: blur(8px);
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateY(0) scale(1); 
+                filter: blur(0);
+            }
         }
 
         .card-header {
             margin-bottom: 2.5rem;
             text-align: center;
+            opacity: 0;
+            animation: cascadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s forwards;
+        }
+        
+        .login-form-wrapper {
+            opacity: 0;
+            animation: cascadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.25s forwards;
+        }
+
+        @keyframes cascadeUp {
+            0% { opacity: 0; transform: translateY(15px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
 
         .card-header .login-logo {

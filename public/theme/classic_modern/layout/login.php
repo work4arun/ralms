@@ -42,6 +42,7 @@ $templatecontext = [
     'output'         => $OUTPUT,
     'bodyattributes' => $OUTPUT->body_attributes(),
     'langmenu'       => $primarymenu['lang'],
+    'maincontent'    => $OUTPUT->main_content(),
 ];
 
 echo $OUTPUT->render_from_template('theme_classic_modern/login', $templatecontext);

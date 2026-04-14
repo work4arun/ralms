@@ -32,7 +32,12 @@
             </svg>
         </div>
         <h1>Maintenance Mode</h1>
-        <p style="color:var(--cm-muted);margin:0">The system is temporarily unavailable for scheduled maintenance. Please try again shortly.</p>
+        <p style="color:var(--cm-muted);margin-bottom:1rem">The system is temporarily unavailable for scheduled maintenance. Please try again shortly.</p>
+        {{# maincontent }}
+        <div style="text-align:left;margin-top:1rem;font-size:0.9rem;color:var(--cm-text)">
+            {{{ maincontent }}}
+        </div>
+        {{/ maincontent }}
     </div>
 </div>
 </body>

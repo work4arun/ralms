@@ -43,6 +43,7 @@ $templatecontext = [
     'headercontent'  => $headercontent,
     'usermenu'       => $primarymenu['user'],
     'langmenu'       => $primarymenu['lang'],
+    'maincontent'    => $OUTPUT->main_content(),
 ];
 
 echo $OUTPUT->render_from_template('theme_classic_modern/standard', $templatecontext);

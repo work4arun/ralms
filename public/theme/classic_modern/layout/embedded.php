@@ -1,4 +1,10 @@
 <?php
 defined('MOODLE_INTERNAL') || die();
-$templatecontext = ['sitename' => format_string($SITE->shortname, true, ['context' => context_system::instance(), 'escape' => false]), 'output' => $OUTPUT, 'bodyattributes' => $OUTPUT->body_attributes()];
+$templatecontext = [
+    'sitename'       => format_string($SITE->shortname, true,
+                            ['context' => context_system::instance(), 'escape' => false]),
+    'output'         => $OUTPUT,
+    'bodyattributes' => $OUTPUT->body_attributes(),
+    'maincontent'    => $OUTPUT->main_content(),
+];
 echo $OUTPUT->render_from_template('theme_classic_modern/embedded', $templatecontext);

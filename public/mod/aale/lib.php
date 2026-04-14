@@ -191,25 +191,44 @@ function aale_get_coursemodule_info($coursemodule) {
 function aale_add_instance($data, $mform = null) {
     global $DB;
 
-    $data->timecreated  = time();
-    $data->timemodified = time();
+    // Build an explicit record containing ONLY the columns that exist in the
+    // aale table. Passing the raw form object directly to insert_record() is
+    // unsafe on PostgreSQL because the form contains array-valued fields
+    // (introeditor, availabilityconditionsjson, etc.) that the driver cannot
+    // serialise and will throw a "Error writing to database" exception.
+    $now    = time();
+    $record = new stdClass();
 
-    // Encode multi-select arrays (groups / users) to JSON strings.
-    if (isset($data->restrict_groups) && is_array($data->restrict_groups)) {
-        $data->restrict_groups = json_encode(array_values($data->restrict_groups));
+    $record->course           = (int) $data->course;
+    $record->name             = $data->name;
+    // intro may still be an editor array in some Moodle versions before
+    // data_postprocessing() fires; extract the text safely.
+    $intro = $data->intro ?? '';
+    if (is_array($intro)) {
+        $intro = $intro['text'] ?? '';
     }
-    if (isset($data->restrict_users) && is_array($data->restrict_users)) {
-        $data->restrict_users = json_encode(array_values($data->restrict_users));
+    $record->intro            = $intro;
+    $record->introformat      = (int) ($data->introformat ?? FORMAT_HTML);
+    $record->bookingopen      = (int) ($data->bookingopen  ?? 0);
+    $record->bookingclose     = (int) ($data->bookingclose ?? 0);
+    $record->restrict_type    = !empty($data->restrict_type) ? $data->restrict_type : 'all';
+    $record->coins_enabled    = (int) ($data->coins_enabled      ?? 1);
+    $record->allow_cancellation = (int) ($data->allow_cancellation ?? 1);
+    $record->timecreated      = $now;
+    $record->timemodified     = $now;
+
+    // Encode multi-select group/user arrays as JSON; default to NULL.
+    $record->restrict_groups = null;
+    if (!empty($data->restrict_groups) && is_array($data->restrict_groups)) {
+        $record->restrict_groups = json_encode(array_values($data->restrict_groups));
     }
 
-    // Ensure restrict_type is set.
-    if (empty($data->restrict_type)) {
-        $data->restrict_type = 'all';
+    $record->restrict_users = null;
+    if (!empty($data->restrict_users) && is_array($data->restrict_users)) {
+        $record->restrict_users = json_encode(array_values($data->restrict_users));
     }
 
-    $data->id = $DB->insert_record('aale', $data);
-
-    return $data->id;
+    return $DB->insert_record('aale', $record);
 }
 
 /**
@@ -227,22 +246,37 @@ function aale_add_instance($data, $mform = null) {
 function aale_update_instance($data, $mform = null) {
     global $DB;
 
-    $data->timemodified = time();
-    $data->id           = $data->instance;
+    // Same explicit-mapping approach as add_instance — never pass the raw form
+    // object to update_record() on PostgreSQL.
+    $record = new stdClass();
 
-    // Encode multi-select arrays to JSON strings.
-    if (isset($data->restrict_groups) && is_array($data->restrict_groups)) {
-        $data->restrict_groups = json_encode(array_values($data->restrict_groups));
-    }
-    if (isset($data->restrict_users) && is_array($data->restrict_users)) {
-        $data->restrict_users = json_encode(array_values($data->restrict_users));
+    $intro = $data->intro ?? '';
+    if (is_array($intro)) {
+        $intro = $intro['text'] ?? '';
     }
 
-    if (empty($data->restrict_type)) {
-        $data->restrict_type = 'all';
+    $record->id               = (int) $data->instance;
+    $record->name             = $data->name;
+    $record->intro            = $intro;
+    $record->introformat      = (int) ($data->introformat ?? FORMAT_HTML);
+    $record->bookingopen      = (int) ($data->bookingopen  ?? 0);
+    $record->bookingclose     = (int) ($data->bookingclose ?? 0);
+    $record->restrict_type    = !empty($data->restrict_type) ? $data->restrict_type : 'all';
+    $record->coins_enabled    = (int) ($data->coins_enabled      ?? 1);
+    $record->allow_cancellation = (int) ($data->allow_cancellation ?? 1);
+    $record->timemodified     = time();
+
+    $record->restrict_groups = null;
+    if (!empty($data->restrict_groups) && is_array($data->restrict_groups)) {
+        $record->restrict_groups = json_encode(array_values($data->restrict_groups));
     }
 
-    return $DB->update_record('aale', $data);
+    $record->restrict_users = null;
+    if (!empty($data->restrict_users) && is_array($data->restrict_users)) {
+        $record->restrict_users = json_encode(array_values($data->restrict_users));
+    }
+
+    return $DB->update_record('aale', $record);
 }
 
 /**

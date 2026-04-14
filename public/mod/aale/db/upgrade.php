@@ -246,5 +246,38 @@ function xmldb_aale_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026041402, 'aale');
     }
 
+    // ── v2.0.3 — 2026-04-14 — Cleanup stranded fields from failed v2.0.0 renames ──────────
+    if ($oldversion < 2026041403) {
+        $slotstable = new xmldb_table('aale_slots');
+
+        // Check if classdate_str got stranded because of a previous crash.
+        $field_cdtmp = new xmldb_field('classdate_str');
+        if ($dbman->field_exists($slotstable, $field_cdtmp)) {
+            // It got stuck! This means 'classdate' is still the old bigint column.
+            $old_classdate = new xmldb_field('classdate');
+            
+            // 1. Drop the old bigint column
+            if ($dbman->field_exists($slotstable, $old_classdate)) {
+                $dbman->drop_field($slotstable, $old_classdate);
+            }
+            
+            // 2. Rename the stranded classdate_str to classdate.
+            $field_cd_str = new xmldb_field('classdate_str', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '');
+            $dbman->rename_field($slotstable, $field_cd_str, 'classdate');
+        }
+
+        // Apply similar check for att_sessions_int if it's stranded
+        $field_att_tmp = new xmldb_field('att_sessions_int', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '1');
+        if ($dbman->field_exists($slotstable, $field_att_tmp)) {
+            $old_att_sessions = new xmldb_field('att_sessions');
+            if ($dbman->field_exists($slotstable, $old_att_sessions)) {
+                 $dbman->drop_field($slotstable, $old_att_sessions);
+            }
+            $dbman->rename_field($slotstable, $field_att_tmp, 'att_sessions');
+        }
+
+        upgrade_mod_savepoint(true, 2026041403, 'aale');
+    }
+
     return true;
 }

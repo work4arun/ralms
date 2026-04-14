@@ -31,8 +31,8 @@ $primarymenu = $primary->export_for_template($renderer);
 $logourl = $OUTPUT->get_logo_url();
 if (method_exists($OUTPUT, 'get_login_logo_url')) {
     $logourl = $OUTPUT->get_login_logo_url() ?: $logourl;
-} else if ($PAGE->theme->get_logo_url()) {
-    $logourl = $PAGE->theme->get_logo_url();
+} else {
+    $logourl = $PAGE->theme->setting_file_url('logo', 'logo') ?: $logourl;
 }
 
 $templatecontext = [

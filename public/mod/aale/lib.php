@@ -120,10 +120,6 @@ function aale_reset_userdata($data) {
 function aale_extend_settings_navigation($settings, $aaalenode) {
     global $PAGE;
 
-    if (has_capability('mod/aale:managewindows', $PAGE->cm->context)) {
-        $url = new moodle_url('/mod/aale/manage_windows.php', array('id' => $PAGE->cm->id));
-        $aaalenode->add(get_string('managewindows', 'mod_aale'), $url);
-    }
 
     if (has_capability('mod/aale:manageslots', $PAGE->cm->context)) {
         $url = new moodle_url('/mod/aale/manage_slots.php', array('id' => $PAGE->cm->id));

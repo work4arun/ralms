@@ -1192,15 +1192,6 @@ function aale_require_manage_slots(context_module $context): void {
     require_capability('mod/aale:manageslots', $context);
 }
 
-/**
- * Require that the current user can manage windows (admin/teacher).
- *
- * @param  context_module $context
- * @return void
- */
-function aale_require_manage_windows(context_module $context): void {
-    require_capability('mod/aale:managewindows', $context);
-}
 
 /**
  * Require that the current user can book a slot.

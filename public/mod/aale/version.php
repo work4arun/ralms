@@ -18,7 +18,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component  = 'mod_aale';
-$plugin->version    = 2026041401;   // 2026-04-14 — fix missing fields
+$plugin->version    = 2026041402;   // 2026-04-14 — fix missing fields
 $plugin->requires   = 2025100600;   // Moodle 5.1+
 $plugin->maturity   = MATURITY_STABLE;
 $plugin->release    = '2.0.0';

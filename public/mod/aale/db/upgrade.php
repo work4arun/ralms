@@ -113,7 +113,8 @@ function xmldb_aale_upgrade($oldversion) {
                 $dbman->drop_field($slotstable, new xmldb_field('classdate'));
                 $field_cd = new xmldb_field('classdate', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '', 'classdate_str');
                 // Rename classdate_str → classdate.
-                $dbman->rename_field($slotstable, new xmldb_field('classdate_str'), 'classdate');
+                $field_cd_str = new xmldb_field('classdate_str', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL, null, '');
+                $dbman->rename_field($slotstable, $field_cd_str, 'classdate');
             }
         }
 
@@ -211,8 +212,8 @@ function xmldb_aale_upgrade($oldversion) {
         // Save point.
         upgrade_mod_savepoint(true, 2026041400, 'aale');
     }
-    // ── v2.0.1 — 2026-04-14 — Fix missing CPA fields from rebuild ──────────
-    if ($oldversion < 2026041401) {
+    // ── v2.0.2 — 2026-04-14 — Fix missing CPA fields from rebuild ──────────
+    if ($oldversion < 2026041402) {
         $slotstable = new xmldb_table('aale_slots');
 
         // Fix att_sessions (drop old TEXT field, rename new INT field)
@@ -220,19 +221,20 @@ function xmldb_aale_upgrade($oldversion) {
         if ($dbman->field_exists($slotstable, $old_att_sessions)) {
             $dbman->drop_field($slotstable, $old_att_sessions);
         }
-        $new_att_sessions = new xmldb_field('att_sessions_int');
+        $new_att_sessions = new xmldb_field('att_sessions_int', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '1');
         if ($dbman->field_exists($slotstable, $new_att_sessions)) {
             $dbman->rename_field($slotstable, $new_att_sessions, 'att_sessions');
         }
 
         // Add missing CPA fields that were defined in install.xml but omitted in 2026041400 upgrade
         $missingfields = [
-            new xmldb_field('available_levels',      XMLDB_TYPE_TEXT,    null, null, null,          null, null,       'track_details'),
-            new xmldb_field('assessmenttype',        XMLDB_TYPE_CHAR,    '8',  null, XMLDB_NOTNULL, null, 'coding',   'available_levels'),
-            new xmldb_field('questions_per_student', XMLDB_TYPE_INTEGER, '4',  null, XMLDB_NOTNULL, null, '2',        'assessmenttype'),
-            new xmldb_field('coins_per_level',       XMLDB_TYPE_TEXT,    null, null, null,          null, null,       'pass_percentage'),
-            new xmldb_field('mcq_questionbank_id',   XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0',        'coins_per_level'),
-            new xmldb_field('cpa_activity_id',       XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0',        'mcq_questionbank_id'),
+            new xmldb_field('slotmode',              XMLDB_TYPE_CHAR,    '8',  null, XMLDB_NOTNULL, null, 'class'),
+            new xmldb_field('available_levels',      XMLDB_TYPE_TEXT,    null, null, null,          null, null),
+            new xmldb_field('assessmenttype',        XMLDB_TYPE_CHAR,    '8',  null, XMLDB_NOTNULL, null, 'coding'),
+            new xmldb_field('questions_per_student', XMLDB_TYPE_INTEGER, '4',  null, XMLDB_NOTNULL, null, '2'),
+            new xmldb_field('coins_per_level',       XMLDB_TYPE_TEXT,    null, null, null,          null, null),
+            new xmldb_field('mcq_questionbank_id',   XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0'),
+            new xmldb_field('cpa_activity_id',       XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0'),
         ];
 
         foreach ($missingfields as $field) {
@@ -241,7 +243,7 @@ function xmldb_aale_upgrade($oldversion) {
             }
         }
 
-        upgrade_mod_savepoint(true, 2026041401, 'aale');
+        upgrade_mod_savepoint(true, 2026041402, 'aale');
     }
 
     return true;

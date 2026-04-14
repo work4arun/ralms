@@ -53,7 +53,7 @@ $PAGE->set_context($context);
 echo $OUTPUT->header();
 
 // Determine user role and display appropriate dashboard.
-$isadmin = has_capability('mod/aale:managewindows', $context);
+$isadmin = has_capability('mod/aale:manageslots', $context);
 $isfaculty = has_capability('mod/aale:markattendance', $context);
 $isstudent = !$isadmin && !$isfaculty;
 

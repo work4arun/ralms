@@ -42,7 +42,7 @@ $string['modulename_help']   = 'AALE (Active Adaptive Learning Environment) supp
 $string['aale:view']             = 'View AALE activity';
 $string['aale:bookslot']         = 'Book a slot';
 $string['aale:manageslots']      = 'Create and manage slots';
-$string['aale:managewindows']    = 'Manage booking windows / restrict access settings';
+
 $string['aale:markattendance']   = 'Mark class attendance';
 $string['aale:setoutcome']       = 'Set CPA assessment outcomes';
 $string['aale:overrideoutcome']  = 'Override frozen CPA outcomes (admin only)';

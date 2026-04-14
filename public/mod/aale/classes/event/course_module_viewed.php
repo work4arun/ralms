@@ -39,6 +39,7 @@ class course_module_viewed extends \core\event\course_module_viewed {
      * array with the appropriate object table name.
      */
     protected function init() {
+        parent::init(); // sets crud = 'r' and edulevel = LEVEL_PARTICIPATING
         $this->data['objecttable'] = 'aale';
     }
 }

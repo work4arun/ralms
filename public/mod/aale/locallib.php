@@ -44,6 +44,8 @@ define('AALE_COIN_TYPE_REDEMPTION',    'redemption');
 define('AALE_COIN_TYPE_ADMIN_ADD',     'admin_add');
 define('AALE_COIN_TYPE_ADMIN_DEDUCT',  'admin_deduct');
 
+define('AALE_SESSION_LABELS', ['FN1', 'FN2', 'AN1', 'AN2']);
+
 // ── Booking-window helpers (Layer 1 — stored on the aale record) ─────────────
 
 /**
@@ -286,13 +288,6 @@ function aale_book_slot(int $aaleid, int $slotid, int $userid, int $level_select
     return $bookingid;
 }
 
-/**
- * Cancel a booking (student or admin).
- *
- * @param  int  $bookingid
- * @param  bool $byadmin
- * @return bool
- */
 /**
  * Cancel a booking.
  *

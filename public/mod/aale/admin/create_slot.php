@@ -502,8 +502,12 @@ if ($form->is_cancelled()) {
                     $DB->insert_record('aale_slots', $rec);
                 }
             } catch (\dml_exception $e) {
-                // Temporary debug capture
-                throw new \moodle_exception('error', 'error', '', null, "DB ERROR: " . $e->getMessage() . " => " . $e->debuginfo);
+                // Bypass Moodle's error suppression
+                die("<div style='padding:20px; border:2px solid red; background:#ffe6e6; color:red; font-family:sans-serif;'>
+                     <h3>Critical Database Error Caught</h3>
+                     <strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "<br><br>
+                     <strong>Detail:</strong> " . htmlspecialchars($e->debuginfo) . "
+                     </div>");
             }
         }
 
@@ -548,8 +552,12 @@ if ($form->is_cancelled()) {
                 $msg = get_string('slotcreated', 'mod_aale');
             }
         } catch (\dml_exception $e) {
-            // Temporary debug capture
-            throw new \moodle_exception('error', 'error', '', null, "DB ERROR: " . $e->getMessage() . " => " . $e->debuginfo);
+            // Bypass Moodle's error suppression
+            die("<div style='padding:20px; border:2px solid red; background:#ffe6e6; color:red; font-family:sans-serif;'>
+                 <h3>Critical Database Error Caught</h3>
+                 <strong>Message:</strong> " . htmlspecialchars($e->getMessage()) . "<br><br>
+                 <strong>Detail:</strong> " . htmlspecialchars($e->debuginfo) . "
+                 </div>");
         }
     }
 

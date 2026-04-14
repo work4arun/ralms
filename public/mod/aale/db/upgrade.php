@@ -211,6 +211,38 @@ function xmldb_aale_upgrade($oldversion) {
         // Save point.
         upgrade_mod_savepoint(true, 2026041400, 'aale');
     }
+    // ── v2.0.1 — 2026-04-14 — Fix missing CPA fields from rebuild ──────────
+    if ($oldversion < 2026041401) {
+        $slotstable = new xmldb_table('aale_slots');
+
+        // Fix att_sessions (drop old TEXT field, rename new INT field)
+        $old_att_sessions = new xmldb_field('att_sessions');
+        if ($dbman->field_exists($slotstable, $old_att_sessions)) {
+            $dbman->drop_field($slotstable, $old_att_sessions);
+        }
+        $new_att_sessions = new xmldb_field('att_sessions_int');
+        if ($dbman->field_exists($slotstable, $new_att_sessions)) {
+            $dbman->rename_field($slotstable, $new_att_sessions, 'att_sessions');
+        }
+
+        // Add missing CPA fields that were defined in install.xml but omitted in 2026041400 upgrade
+        $missingfields = [
+            new xmldb_field('available_levels',      XMLDB_TYPE_TEXT,    null, null, null,          null, null,       'track_details'),
+            new xmldb_field('assessmenttype',        XMLDB_TYPE_CHAR,    '8',  null, XMLDB_NOTNULL, null, 'coding',   'available_levels'),
+            new xmldb_field('questions_per_student', XMLDB_TYPE_INTEGER, '4',  null, XMLDB_NOTNULL, null, '2',        'assessmenttype'),
+            new xmldb_field('coins_per_level',       XMLDB_TYPE_TEXT,    null, null, null,          null, null,       'pass_percentage'),
+            new xmldb_field('mcq_questionbank_id',   XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0',        'coins_per_level'),
+            new xmldb_field('cpa_activity_id',       XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0',        'mcq_questionbank_id'),
+        ];
+
+        foreach ($missingfields as $field) {
+            if (!$dbman->field_exists($slotstable, $field)) {
+                $dbman->add_field($slotstable, $field);
+            }
+        }
+
+        upgrade_mod_savepoint(true, 2026041401, 'aale');
+    }
 
     return true;
 }

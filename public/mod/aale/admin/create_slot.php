@@ -492,13 +492,18 @@ if ($form->is_cancelled()) {
             $rec->timecreated          = $now;
             $rec->timemodified         = $now;
 
-            if ($data->slotid) {
-                // Edit mode: update only the first (matching) record.
-                $rec->id = (int) $data->slotid;
-                $DB->update_record('aale_slots', $rec);
-                break; // one update
-            } else {
-                $DB->insert_record('aale_slots', $rec);
+            try {
+                if ($data->slotid) {
+                    // Edit mode: update only the first (matching) record.
+                    $rec->id = (int) $data->slotid;
+                    $DB->update_record('aale_slots', $rec);
+                    break; // one update
+                } else {
+                    $DB->insert_record('aale_slots', $rec);
+                }
+            } catch (\dml_exception $e) {
+                // Temporary debug capture
+                throw new \moodle_exception('error', 'error', '', null, "DB ERROR: " . $e->getMessage() . " => " . $e->debuginfo);
             }
         }
 
@@ -533,13 +538,18 @@ if ($form->is_cancelled()) {
         $rec->timecreated          = $now;
         $rec->timemodified         = $now;
 
-        if ($data->slotid) {
-            $rec->id = (int) $data->slotid;
-            $DB->update_record('aale_slots', $rec);
-            $msg = get_string('slotupdated', 'mod_aale');
-        } else {
-            $DB->insert_record('aale_slots', $rec);
-            $msg = get_string('slotcreated', 'mod_aale');
+        try {
+            if ($data->slotid) {
+                $rec->id = (int) $data->slotid;
+                $DB->update_record('aale_slots', $rec);
+                $msg = get_string('slotupdated', 'mod_aale');
+            } else {
+                $DB->insert_record('aale_slots', $rec);
+                $msg = get_string('slotcreated', 'mod_aale');
+            }
+        } catch (\dml_exception $e) {
+            // Temporary debug capture
+            throw new \moodle_exception('error', 'error', '', null, "DB ERROR: " . $e->getMessage() . " => " . $e->debuginfo);
         }
     }
 

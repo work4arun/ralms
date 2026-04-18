@@ -52,20 +52,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notes = optional_param('notes', '', PARAM_TEXT);
 
         if ($amount > 0) {
-            aale_admin_add_coins($userid, $amount, $notes);
-            redirect($PAGE->url, get_string('coinsadded', 'mod_aale'), \core\notification::SUCCESS);
+            aale_admin_add_coins($aale->id, $userid, $amount, $notes);
+            redirect($PAGE->url, get_string('coinsadded', 'mod_aale'), null, \core\output\notification::NOTIFY_SUCCESS);
         }
     } else if ($action === 'deduct_coins') {
         $amount = required_param('amount', PARAM_INT);
-        $notes = optional_param('notes', '', PARAM_TEXT);
+        $notes  = optional_param('notes', '', PARAM_TEXT);
 
         if ($amount > 0) {
-            $current_balance = aale_get_coin_balance($userid);
+            $current_balance = aale_get_coin_balance($aale->id, $userid);
             if ($current_balance < $amount) {
-                redirect($PAGE->url, get_string('insufficientcoins', 'mod_aale'), \core\notification::ERROR);
+                redirect($PAGE->url, get_string('insufficientcoins', 'mod_aale'), null, \core\output\notification::NOTIFY_ERROR);
             } else {
-                aale_admin_deduct_coins($userid, $amount, $notes);
-                redirect($PAGE->url, get_string('coinsdeducted', 'mod_aale'), \core\notification::SUCCESS);
+                aale_admin_deduct_coins($aale->id, $userid, $amount, $notes);
+                redirect($PAGE->url, get_string('coinsdeducted', 'mod_aale'), null, \core\output\notification::NOTIFY_SUCCESS);
             }
         }
     }
@@ -73,9 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 echo $OUTPUT->header();
 
-// Get enrolled students
-$context = context_module::instance($cmid);
-$students = get_enrolled_users($context, 'mod/aale:student');
+// Get enrolled students (those who can book slots).
+// 'mod/aale:student' does not exist — use 'mod/aale:bookslot' instead.
+$context  = context_module::instance($cmid);
+$students = get_enrolled_users($context, 'mod/aale:bookslot');
 
 if (empty($students)) {
     echo $OUTPUT->notification(get_string('nostudents', 'mod_aale'));
@@ -104,7 +105,7 @@ echo $OUTPUT->box($form);
 // If a student is selected, show their details and forms
 if ($selected_userid) {
     $selected_student = $DB->get_record('user', array('id' => $selected_userid), '*', MUST_EXIST);
-    $balance = aale_get_coin_balance($selected_userid);
+    $balance = aale_get_coin_balance($aale->id, $selected_userid);
 
     echo $OUTPUT->heading(get_string('studentcoindetails', 'mod_aale'), 3);
 
@@ -201,34 +202,39 @@ if ($selected_userid) {
     // Show ledger
     echo $OUTPUT->heading(get_string('coinledger', 'mod_aale'), 4);
 
-    $ledger = aale_get_coin_ledger($selected_userid);
+    // aale_get_coin_ledger(aaleid, userid) — correct param order.
+    $ledger = aale_get_coin_ledger($aale->id, $selected_userid);
 
     if (empty($ledger)) {
-        echo $OUTPUT->notification(get_string('nolodger', 'mod_aale'));
+        echo $OUTPUT->notification(get_string('noledger', 'mod_aale'));
     } else {
         $table = new html_table();
         $table->head = array(
-            get_string('date', 'mod_aale'),
-            get_string('type', 'mod_aale'),
+            get_string('date',   'mod_aale'),
+            get_string('type',   'mod_aale'),
             get_string('amount', 'mod_aale'),
-            get_string('notes', 'mod_aale'),
-            get_string('balance', 'mod_aale')
+            get_string('notes',  'mod_aale'),
+            get_string('balance','mod_aale')
         );
         $table->attributes = array('class' => 'table table-striped');
 
         foreach ($ledger as $entry) {
+            // Field names in aale_coins: timecreated, txtype, amount, balance, notes.
+            $txtype   = $entry->txtype ?? '';
+            $islabel  = get_string('txtype_' . $txtype, 'mod_aale');
+            $amtval   = (int)$entry->amount;
+            $amtclass = $amtval > 0 ? 'text-success' : 'text-danger';
+            $amtdisp  = ($amtval > 0 ? '+' : '') . $amtval;
+
             $row = new html_table_row();
             $row->cells = array(
-                new html_table_cell(userdate($entry->created_at, get_string('strftimedatetime', 'langconfig'))),
-                new html_table_cell(ucfirst($entry->type)),
+                new html_table_cell(userdate($entry->timecreated, get_string('strftimedatetime', 'langconfig'))),
+                new html_table_cell($islabel),
                 new html_table_cell(
-                    html_writer::tag('strong',
-                        ($entry->type === 'add' ? '+' : '-') . $entry->amount,
-                        array('class' => $entry->type === 'add' ? 'text-success' : 'text-danger')
-                    )
+                    html_writer::tag('strong', $amtdisp, array('class' => $amtclass))
                 ),
-                new html_table_cell(format_string($entry->notes)),
-                new html_table_cell(html_writer::tag('strong', $entry->balance_after))
+                new html_table_cell(format_string($entry->notes ?? '')),
+                new html_table_cell(html_writer::tag('strong', (int)$entry->balance))
             );
             $table->data[] = $row;
         }
@@ -251,7 +257,7 @@ $table->head = array(
 $table->attributes = array('class' => 'table table-striped');
 
 foreach ($students as $student) {
-    $balance = aale_get_coin_balance($student->id);
+    $balance = aale_get_coin_balance($aale->id, $student->id);
 
     $row = new html_table_row();
     $row->cells = array(

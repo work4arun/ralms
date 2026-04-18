@@ -459,95 +459,126 @@ if ($form->is_cancelled()) {
 
 } elseif ($data = $form->get_data()) {
 
-    $now = time();
+    $now    = time();
+    $aaleid = (int) $aale->id;
 
+    // Safety guard — FK target must be valid before any INSERT.
+    if ($aaleid <= 0) {
+        throw new moodle_exception('error', 'error', '', null, 'Invalid AALE instance ID.');
+    }
+
+    // ── Helper: build the common slot record with explicit scalar types ───────
+    // Every field is cast to its correct scalar type so PostgreSQL never sees
+    // a PHP array or null where a NOT NULL column is expected.
+    $build_slot_rec = function(array $fields) use ($aaleid, $now, $USER): stdClass {
+        $rec = new stdClass();
+
+        // Required scalars — all fields that appear in install.xml aale_slots.
+        $rec->aaleid                  = $aaleid;
+        $rec->slotmode                = (string) ($fields['slotmode']                ?? 'class');
+        $rec->teacherid               = (int)    ($fields['teacherid']               ?? 0);
+        $rec->show_faculty_to_students= (int)    ($fields['show_faculty_to_students']?? 1);
+        $rec->venue                   = (string) ($fields['venue']                   ?? '');
+        $rec->classdate               = (string) ($fields['classdate']               ?? '');
+        $rec->classtime               = (string) ($fields['classtime']               ?? '');
+        $rec->totalslots              = (int)    ($fields['totalslots']              ?? 60);
+        $rec->att_sessions            = (int)    ($fields['att_sessions']            ?? 1);
+        $rec->track                   = (string) ($fields['track']                   ?? '');
+        // Nullable TEXT fields — use null (not '') so Moodle/PG handle them cleanly.
+        $rec->track_details           = isset($fields['track_details']) && $fields['track_details'] !== ''
+                                            ? (string) $fields['track_details'] : null;
+        $rec->available_levels        = (string) ($fields['available_levels']        ?? '[]');
+        $rec->assessmenttype          = (string) ($fields['assessmenttype']          ?? 'coding');
+        $rec->questions_per_student   = (int)    ($fields['questions_per_student']   ?? 2);
+        $rec->pass_percentage         = (int)    ($fields['pass_percentage']         ?? 60);
+        $rec->coins_per_level         = (string) ($fields['coins_per_level']         ?? '{}');
+        $rec->mcq_questionbank_id     = (int)    ($fields['mcq_questionbank_id']     ?? 0);
+        $rec->cpa_activity_id         = (int)    ($fields['cpa_activity_id']         ?? 0);
+        $rec->status                  = 'active';
+        $rec->createdby               = (int) $USER->id;
+        $rec->timecreated             = $now;
+        $rec->timemodified            = $now;
+
+        return $rec;
+    };
+
+    // ── CLASS MODE ────────────────────────────────────────────────────────────
     if ($data->slotmode === 'class') {
-        // Create one slot row per selected faculty (batch creation).
-        $teacher_ids = (array) $data->class_teacher_ids;
-        $teacher_ids = array_slice($teacher_ids, 0, 25); // enforce max 25
+
+        // Clean teacher IDs — positive integers only.
+        $raw_ids     = (array) ($data->class_teacher_ids ?? []);
+        $teacher_ids = array_values(array_filter(
+            array_map('intval', $raw_ids),
+            fn($id) => $id > 0
+        ));
+        $teacher_ids = array_slice($teacher_ids, 0, 25);
+
+        if (empty($teacher_ids)) {
+            throw new moodle_exception('error', 'error', '', null,
+                get_string('error_nofacultyselected', 'mod_aale'));
+        }
+
+        $slotid = (int) $data->slotid;
 
         foreach ($teacher_ids as $tid) {
-            $rec = new stdClass();
-            $rec->aaleid               = $aale->id;
-            $rec->slotmode             = 'class';
-            $rec->teacherid            = (int) $tid;
-            $rec->show_faculty_to_students = 1;
-            $rec->venue                = trim($data->class_venue);
-            $rec->classdate            = trim($data->class_classdate);
-            $rec->classtime            = trim($data->class_classtime);
-            $rec->totalslots           = (int) $data->class_totalslots;
-            $rec->att_sessions         = (int) $data->class_att_sessions;
-            // CPA fields default.
-            $rec->track                = '';
-            $rec->track_details        = '';
-            $rec->available_levels     = '[]';
-            $rec->assessmenttype       = 'coding';
-            $rec->questions_per_student = 2;
-            $rec->pass_percentage      = 60;
-            $rec->coins_per_level      = '{}';
-            $rec->mcq_questionbank_id  = 0;
-            $rec->cpa_activity_id      = 0;
-            $rec->status               = 'active';
-            $rec->createdby            = $USER->id;
-            $rec->timecreated          = $now;
-            $rec->timemodified         = $now;
+            $rec = $build_slot_rec([
+                'slotmode'   => 'class',
+                'teacherid'  => $tid,
+                'venue'      => trim((string)($data->class_venue      ?? '')),
+                'classdate'  => trim((string)($data->class_classdate  ?? '')),
+                'classtime'  => trim((string)($data->class_classtime  ?? '')),
+                'totalslots' => (int)($data->class_totalslots         ?? 60),
+                'att_sessions'=> (int)($data->class_att_sessions      ?? 1),
+            ]);
 
-            try {
-                if ($data->slotid) {
-                    // Edit mode: update only the first (matching) record.
-                    $rec->id = (int) $data->slotid;
-                    $DB->update_record('aale_slots', $rec);
-                    break; // one update
-                } else {
-                    $DB->insert_record('aale_slots', $rec);
-                }
-            } catch (\dml_exception $e) {
-                throw new \moodle_exception('error', 'error', '', null, "Database Error: " . $e->getMessage());
+            if ($slotid > 0) {
+                $rec->id = $slotid;
+                $DB->update_record('aale_slots', $rec);
+                break; // one update in edit mode
+            } else {
+                $DB->insert_record('aale_slots', $rec);
             }
         }
 
-        $msg = $data->slotid
+        $msg = $slotid > 0
             ? get_string('slotupdated', 'mod_aale')
             : get_string('slotscreated', 'mod_aale', count($teacher_ids));
 
+    // ── CPA MODE ──────────────────────────────────────────────────────────────
     } else {
-        // CPA Mode — single slot record.
-        $rec = new stdClass();
-        $rec->aaleid               = $aale->id;
-        $rec->slotmode             = 'cpa';
-        $rec->teacherid            = (int) $data->cpa_teacherid;
-        $rec->show_faculty_to_students = (int) $data->cpa_show_faculty;
-        $rec->venue                = trim($data->cpa_venue);
-        $rec->classdate            = trim($data->cpa_classdate);
-        $rec->classtime            = trim($data->cpa_classtime ?? '');
-        $rec->totalslots           = (int) $data->cpa_totalslots;
-        $rec->att_sessions         = 1; // not used in CPA mode
-        $rec->track                = trim($data->cpa_track);
-        $rec->track_details        = trim($data->cpa_track_details ?? '');
-        $rec->available_levels     = json_encode(array_values((array)$data->cpa_available_levels));
-        $rec->assessmenttype       = $data->cpa_assessmenttype;
-        $rec->questions_per_student = (int) $data->cpa_questions_per_student;
-        $rec->pass_percentage      = (int) $data->cpa_pass_percentage;
-        $raw_coins = trim($data->cpa_coins_per_level ?? '{}');
-        $rec->coins_per_level      = (json_decode($raw_coins) !== null) ? $raw_coins : '{}';
-        $rec->mcq_questionbank_id  = (int) ($data->cpa_mcq_questionbank_id ?? 0);
-        $rec->cpa_activity_id      = (int) ($data->cpa_activity_id ?? 0);
-        $rec->status               = 'active';
-        $rec->createdby            = $USER->id;
-        $rec->timecreated          = $now;
-        $rec->timemodified         = $now;
+        $raw_coins  = trim((string)($data->cpa_coins_per_level ?? '{}'));
+        $valid_json = (json_decode($raw_coins) !== null) ? $raw_coins : '{}';
 
-        try {
-            if ($data->slotid) {
-                $rec->id = (int) $data->slotid;
-                $DB->update_record('aale_slots', $rec);
-                $msg = get_string('slotupdated', 'mod_aale');
-            } else {
-                $DB->insert_record('aale_slots', $rec);
-                $msg = get_string('slotcreated', 'mod_aale');
-            }
-        } catch (\dml_exception $e) {
-            throw new \moodle_exception('error', 'error', '', null, "Database Error: " . $e->getMessage());
+        $rec = $build_slot_rec([
+            'slotmode'                => 'cpa',
+            'teacherid'               => (int)($data->cpa_teacherid           ?? 0),
+            'show_faculty_to_students'=> (int)($data->cpa_show_faculty        ?? 0),
+            'venue'                   => trim((string)($data->cpa_venue        ?? '')),
+            'classdate'               => trim((string)($data->cpa_classdate    ?? '')),
+            'classtime'               => trim((string)($data->cpa_classtime    ?? '')),
+            'totalslots'              => (int)($data->cpa_totalslots          ?? 30),
+            'att_sessions'            => 1,
+            'track'                   => trim((string)($data->cpa_track        ?? '')),
+            'track_details'           => trim((string)($data->cpa_track_details ?? '')),
+            'available_levels'        => json_encode(
+                                            array_values((array)($data->cpa_available_levels ?? []))
+                                         ),
+            'assessmenttype'          => (string)($data->cpa_assessmenttype   ?? 'coding'),
+            'questions_per_student'   => (int)($data->cpa_questions_per_student ?? 2),
+            'pass_percentage'         => (int)($data->cpa_pass_percentage     ?? 60),
+            'coins_per_level'         => $valid_json,
+            'mcq_questionbank_id'     => (int)($data->cpa_mcq_questionbank_id ?? 0),
+            'cpa_activity_id'         => (int)($data->cpa_activity_id         ?? 0),
+        ]);
+
+        $slotid = (int) $data->slotid;
+        if ($slotid > 0) {
+            $rec->id = $slotid;
+            $DB->update_record('aale_slots', $rec);
+            $msg = get_string('slotupdated', 'mod_aale');
+        } else {
+            $DB->insert_record('aale_slots', $rec);
+            $msg = get_string('slotcreated', 'mod_aale');
         }
     }
 

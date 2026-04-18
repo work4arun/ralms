@@ -47,11 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = optional_param('action', '', PARAM_ALPHA);
 
     if ($action === 'admin_override') {
-        $userid = required_param('userid', PARAM_INT);
-        $outcome = required_param('outcome', PARAM_ALPHA);
+        $bookingid = required_param('bookingid', PARAM_INT);
+        $outcome   = required_param('outcome',   PARAM_ALPHAEXT);
 
-        if (in_array($outcome, array('cleared', 'try_again', 'malpractice', 'ignore'))) {
-            aale_admin_override_outcome($slotid, $userid, $outcome);
+        // Valid outcomes: won | try_again | malpractice.
+        if (in_array($outcome, ['won', 'try_again', 'malpractice'])) {
+            aale_admin_override_outcome($bookingid, $outcome);
         }
     }
 }
@@ -83,75 +84,69 @@ if ($slotid) {
 
     echo $OUTPUT->box($summary_html);
 
-    // Get enrolled students
-    $context = context_module::instance($cmid);
-    $students = get_enrolled_users($context, 'mod/aale:student');
+    // Fetch students from aale_bookings (not enrolled users — only booked students matter).
+    $bookings = aale_get_slot_bookings($slotid);
 
-    if (empty($students)) {
-        echo $OUTPUT->notification(get_string('nostudents', 'mod_aale'));
+    if (empty($bookings)) {
+        echo $OUTPUT->notification(get_string('nobookings', 'mod_aale'));
     } else {
-        // Display roster table
         $table = new html_table();
         $table->head = array(
-            get_string('name', 'mod_aale'),
-            get_string('track', 'mod_aale'),
-            get_string('level', 'mod_aale'),
-            get_string('attendance', 'mod_aale'),
-            get_string('currentoutcome', 'mod_aale'),
-            get_string('overriddenby', 'mod_aale'),
-            get_string('overriddenat', 'mod_aale'),
-            get_string('actions', 'mod_aale')
+            get_string('name',          'mod_aale'),
+            get_string('track',         'mod_aale'),
+            get_string('level',         'mod_aale'),
+            get_string('attendance',    'mod_aale'),
+            get_string('outcome',       'mod_aale'),
+            get_string('coins',         'mod_aale'),
+            get_string('actions',       'mod_aale')
         );
         $table->attributes = array('class' => 'table table-striped');
 
-        foreach ($students as $student) {
-            $outcome_record = aale_get_outcome($slotid, $student->id);
-            $attendance = aale_get_attendance_status($slotid, $student->id);
-            $outcome = $outcome_record ? $outcome_record->outcome : null;
-            $is_frozen = $outcome_record ? (bool)$outcome_record->is_frozen : false;
-            $is_admin_override = $outcome_record ? (bool)$outcome_record->admin_override : false;
-            $overrideby = $outcome_record ? $outcome_record->overrideby : null;
-            $overrideat = $outcome_record ? $outcome_record->overrideat : null;
+        // Outcome badge colours.
+        $outcomecolours = [
+            'won'          => 'success',
+            'try_again'    => 'warning',
+            'malpractice'  => 'danger',
+        ];
+
+        foreach ($bookings as $booking) {
+            $student       = $DB->get_record('user', ['id' => $booking->userid]);
+            // aale_get_outcome(bookingid) — single parameter.
+            $outcome_record      = aale_get_outcome($booking->id);
+            $outcome             = $outcome_record ? $outcome_record->outcome : null;
+            $is_frozen           = $outcome_record ? (bool)$outcome_record->frozen : false;
+            $is_admin_override   = $outcome_record ? (bool)$outcome_record->admin_override : false;
+            $overrideby_id       = $outcome_record ? $outcome_record->overrideby : 0;
+            $overrideat_ts       = $outcome_record ? $outcome_record->overrideat : 0;
 
             $row = new html_table_row();
 
-            // Background color based on outcome
-            if ($is_frozen) {
-                switch ($outcome) {
-                    case 'cleared':
-                        $row->attributes = array('class' => 'outcome-cleared');
-                        break;
-                    case 'try_again':
-                        $row->attributes = array('class' => 'outcome-try-again');
-                        break;
-                    case 'malpractice':
-                        $row->attributes = array('class' => 'outcome-malpractice');
-                        break;
-                    case 'ignore':
-                        $row->attributes = array('class' => 'outcome-ignore');
-                        break;
-                    default:
-                        $row->attributes = array('class' => 'outcome-pending');
-                }
-            } else {
-                $row->attributes = array('class' => 'outcome-pending');
-            }
-
-            if ($is_frozen || $is_admin_override) {
-                $row->attributes['class'] .= ' frozen-row';
-            }
+            // Attendance comes from booking status (present / absent / booked).
+            $attstatus   = $booking->status;
+            $attbadgecls = $attstatus === 'present' ? 'badge-success'
+                         : ($attstatus === 'absent'  ? 'badge-danger' : 'badge-secondary');
+            $attbadge    = html_writer::tag('span', ucfirst($attstatus), ['class' => 'badge ' . $attbadgecls]);
 
             $row->cells = array(
-                new html_table_cell(fullname($student)),
-                new html_table_cell($student->profile['track'] ?? '-'),
-                new html_table_cell($student->profile['level'] ?? '-'),
-                new html_table_cell(ucfirst($attendance ?: 'Not marked')),
+                new html_table_cell($student ? fullname($student) : '?'),
+                new html_table_cell($booking->track_selected ?: '-'),
+                new html_table_cell($booking->level_selected > 0 ? $booking->level_selected : '-'),
+                new html_table_cell($attbadge),
             );
 
-            // Current outcome
-            $outcome_display = $outcome ? ucfirst(str_replace('_', ' ', $outcome)) : 'Pending';
-            if ($is_frozen || $is_admin_override) {
-                $outcome_display .= ' ' . html_writer::tag('i', '', array('class' => 'fa fa-lock', 'title' => get_string('locked', 'mod_aale')));
+            // Outcome badge.
+            if ($outcome && isset($outcomecolours[$outcome])) {
+                $label   = get_string('outcome_' . $outcome, 'mod_aale');
+                $badgecls = 'badge-' . $outcomecolours[$outcome];
+                $obadge  = html_writer::tag('span', $label, ['class' => 'badge ' . $badgecls]);
+                if ($is_frozen) {
+                    $obadge .= ' ' . html_writer::tag('i', '', ['class' => 'fa fa-lock text-muted ml-1',
+                                                                  'title' => get_string('frozen', 'mod_aale')]);
+                }
+                $outcome_display = $obadge;
+            } else {
+                $outcome_display = html_writer::tag('span', get_string('pending', 'mod_aale'),
+                                                    ['class' => 'badge badge-light border']);
             }
             $row->cells[] = new html_table_cell($outcome_display);
 
@@ -159,30 +154,33 @@ if ($slotid) {
             $overrideby_display = $is_admin_override && $overrideby ? $overrideby : '-';
             $row->cells[] = new html_table_cell($overrideby_display);
 
-            $overrideat_display = $is_admin_override && $overrideat ? userdate($overrideat, get_string('strftimedatetime', 'langconfig')) : '-';
-            $row->cells[] = new html_table_cell($overrideat_display);
-
-            // Actions - admin can always override
-            $form = html_writer::start_tag('form', array('method' => 'POST', 'class' => 'outcome-form'));
-            $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()));
-            $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'action', 'value' => 'admin_override'));
-            $form .= html_writer::empty_tag('input', array('type' => 'hidden', 'name' => 'userid', 'value' => $student->id));
-
-            $select_options = array(
-                'cleared' => get_string('cleared', 'mod_aale'),
-                'try_again' => get_string('tryagain', 'mod_aale'),
-                'malpractice' => get_string('malpractice', 'mod_aale'),
-                'ignore' => get_string('ignore', 'mod_aale'),
+            // Coins awarded (W1 only).
+            $coinsearned = $outcome_record ? (int)$outcome_record->coins_awarded : 0;
+            $row->cells[] = new html_table_cell(
+                $coinsearned > 0
+                    ? html_writer::tag('span', '⭐ ' . $coinsearned, ['class' => 'text-warning font-weight-bold'])
+                    : '–'
             );
-            $form .= html_writer::select($select_options, 'outcome', $outcome, array('' => 'Select outcome...'));
-            $form .= ' ';
-            $form .= html_writer::tag('button', get_string('override', 'mod_aale'),
-                array('type' => 'submit', 'class' => 'btn btn-sm btn-danger')
-            );
-            $form .= html_writer::end_tag('form');
 
-            $row->cells[] = new html_table_cell($form);
+            // Admin override action (correct outcome values: won / try_again / malpractice).
+            $override_form  = html_writer::start_tag('form', ['method' => 'POST', 'class' => 'd-inline']);
+            $override_form .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey',   'value' => sesskey()]);
+            $override_form .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action',    'value' => 'admin_override']);
+            $override_form .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'bookingid', 'value' => $booking->id]);
 
+            $select_options = [
+                'won'          => get_string('outcome_won',          'mod_aale'),
+                'try_again'    => get_string('outcome_try_again',    'mod_aale'),
+                'malpractice'  => get_string('outcome_malpractice',  'mod_aale'),
+            ];
+            $override_form .= html_writer::select($select_options, 'outcome', $outcome ?: '',
+                                                   ['' => get_string('selectoutcome', 'mod_aale')]);
+            $override_form .= ' ';
+            $override_form .= html_writer::tag('button', get_string('override', 'mod_aale'),
+                                ['type' => 'submit', 'class' => 'btn btn-sm btn-danger']);
+            $override_form .= html_writer::end_tag('form');
+
+            $row->cells[] = new html_table_cell($override_form);
             $table->data[] = $row;
         }
 

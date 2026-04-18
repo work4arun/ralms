@@ -1048,7 +1048,7 @@ function aale_queue_notification(int $bookingid, string $type, array $extra = []
         'attempts'    => 0,
         'timecreated' => time(),
         'timemodified'=> time(),
-        'timesent'    => null,
+        'timesent'    => 0,   // NOT NULL DEFAULT 0 — never pass null to PostgreSQL
     ]);
 }
 
@@ -1432,21 +1432,55 @@ function aale_render_faculty_dashboard($cm, $aale, $context) {
         $html .= '<p>' . get_string('noslots', 'mod_aale') . '</p>';
     } else {
         $table = new html_table();
-        $table->head = [get_string('date', 'mod_aale'), get_string('mode', 'mod_aale'), get_string('venue', 'mod_aale'), get_string('actions', 'mod_aale')];
+        $table->head = [
+            get_string('date',     'mod_aale'),
+            get_string('mode',     'mod_aale'),
+            get_string('venue',    'mod_aale'),
+            get_string('booked',   'mod_aale'),
+            get_string('actions',  'mod_aale'),
+        ];
+        $table->attributes = ['class' => 'generaltable table-hover'];
+
         foreach ($slots as $slot) {
             $att_url = new moodle_url('/mod/aale/faculty/attendance.php', ['id' => $cm->id, 'slotid' => $slot->id]);
-            $out_url = new moodle_url('/mod/aale/faculty/outcomes.php', ['id' => $cm->id, 'slotid' => $slot->id]);
-            
-            $actions = html_writer::link($att_url, get_string('markattendance', 'mod_aale'), ['class' => 'btn btn-sm btn-primary mr-2']);
-            if ($slot->slotmode === AALE_SLOT_MODE_CPA) {
-                $actions .= html_writer::link($out_url, get_string('setoutcome', 'mod_aale'), ['class' => 'btn btn-sm btn-info']);
+            $out_url = new moodle_url('/mod/aale/faculty/outcomes.php',   ['id' => $cm->id, 'slotid' => $slot->id]);
+
+            // CLASS mode  → Attendance only.
+            // CPA mode    → Outcomes page (which also handles attendance marking).
+            if ($slot->slotmode === AALE_SLOT_MODE_CLASS) {
+                $actions = html_writer::link(
+                    $att_url,
+                    get_string('markattendance', 'mod_aale'),
+                    ['class' => 'btn btn-sm btn-primary']
+                );
+            } else {
+                $actions = html_writer::link(
+                    $out_url,
+                    get_string('outcomes', 'mod_aale'),
+                    ['class' => 'btn btn-sm btn-info']
+                );
             }
-            
+
+            // Student count for this slot.
+            $booked = $DB->count_records('aale_bookings',
+                ['slotid' => $slot->id, 'status' => AALE_BOOKING_STATUS_BOOKED]);
+            $remaining = max(0, (int)$slot->totalslots - $booked);
+            $counthtml = html_writer::tag(
+                'span', $booked . ' / ' . $slot->totalslots,
+                ['class' => $remaining === 0 ? 'text-danger font-weight-bold' : 'text-success']
+            );
+
             $table->data[] = [
-                format_string($slot->classdate) . ' ' . format_string($slot->classtime),
-                ucfirst($slot->slotmode),
+                html_writer::tag('strong', format_string($slot->classdate)) .
+                    html_writer::tag('br', '') .
+                    html_writer::tag('small', format_string($slot->classtime), ['class' => 'text-muted']),
+                html_writer::tag(
+                    'span', strtoupper($slot->slotmode),
+                    ['class' => 'badge ' . ($slot->slotmode === 'cpa' ? 'badge-info' : 'badge-success')]
+                ),
                 format_string($slot->venue),
-                $actions
+                $counthtml,
+                $actions,
             ];
         }
         $html .= html_writer::table($table);

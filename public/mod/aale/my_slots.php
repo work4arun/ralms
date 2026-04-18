@@ -54,27 +54,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $amount = optional_param('amount', 0, PARAM_INT);
 
         if ($amount <= 0) {
-            $message = get_string('error:invalidamount', 'mod_aale');
+            $message = get_string('error_invalidamount', 'mod_aale');
             $messagetype = 'error';
         } else {
             try {
-                aale_redeem_coins($USER->id, $amount, $cm->instance);
+                // aale_redeem_coins(aaleid, userid, amount) — correct param order.
+                aale_redeem_coins($aale->id, $USER->id, $amount);
                 $message = get_string('coinsredeemed', 'mod_aale', $amount);
                 $messagetype = 'success';
             } catch (Exception $e) {
-                $message = get_string('error:redeemcoins', 'mod_aale') . ': ' . $e->getMessage();
+                $message = get_string('error_redeemcoins', 'mod_aale') . ': ' . $e->getMessage();
                 $messagetype = 'error';
             }
         }
     }
 }
 
-// Get student's bookings
-$bookings = aale_get_user_bookings($USER->id);
+// Get student's bookings — requires (aaleid, userid).
+$bookings = aale_get_user_bookings($aale->id, $USER->id);
 
-// Get coin information
-$coinbalance = aale_get_coin_balance($USER->id);
-$coinledger = aale_get_coin_ledger($USER->id);
+// Get coin information — requires (aaleid, userid).
+$coinbalance = aale_get_coin_balance($aale->id, $USER->id);
+$coinledger  = aale_get_coin_ledger($aale->id, $USER->id);
 
 // Check if coins are enabled
 $coinsenabled = isset($aale->coins_enabled) ? $aale->coins_enabled : false;
@@ -97,14 +98,14 @@ if ($coinsenabled) {
     echo html_writer::start_div('card-body');
     echo html_writer::start_div('row');
 
-    // Get totals
-    $totalearned = 0;
+    // Get totals — use amount sign: positive = earned, negative = deducted.
+    $totalearned   = 0;
     $totalredeemed = 0;
     foreach ($coinledger as $entry) {
-        if ($entry->type === 'earned') {
-            $totalearned += $entry->amount;
-        } elseif ($entry->type === 'redeemed') {
-            $totalredeemed += $entry->amount;
+        if ((int)$entry->amount > 0) {
+            $totalearned += (int)$entry->amount;
+        } else {
+            $totalredeemed += abs((int)$entry->amount);
         }
     }
 
@@ -148,8 +149,11 @@ if ($coinsenabled) {
         echo html_writer::start_tag('tbody');
 
         foreach ($coinledger as $entry) {
-            $typestr = get_string('type:' . $entry->type, 'mod_aale');
-            $typebadge = html_writer::tag('span', $typestr, array('class' => 'badge badge-' . ($entry->type === 'earned' ? 'success' : 'warning')));
+            // txtype values: assessment_won, admin_add, redemption, admin_deduct.
+            $txtype    = $entry->txtype ?? '';
+            $typestr   = get_string('txtype_' . $txtype, 'mod_aale');
+            $badgecls  = ((int)$entry->amount > 0) ? 'badge-success' : 'badge-warning';
+            $typebadge = html_writer::tag('span', $typestr, ['class' => 'badge ' . $badgecls]);
 
             echo html_writer::start_tag('tr');
             echo html_writer::tag('td', userdate($entry->timecreated, get_string('strftimedate', 'langconfig')));

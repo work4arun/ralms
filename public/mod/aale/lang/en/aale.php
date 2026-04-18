@@ -398,3 +398,55 @@ $string['pending']               = 'Pending';
 $string['selectslot']            = 'Select a slot to view outcomes';
 $string['manage']                = 'Manage';
 $string['window']                = 'Booking Window';
+
+// ============================================================================
+// Coins — student view (my_slots.php)
+// ============================================================================
+$string['coinsummary']           = 'Coin Summary';
+$string['totalearned']           = 'Total Earned';
+$string['totalredeemed']         = 'Total Redeemed';
+$string['currentbalance']        = 'Current Balance';
+$string['coinledger']            = 'Transaction History';
+$string['redeemcoins']           = 'Redeem Coins';
+$string['redeemamount']          = 'Amount to Redeem';
+$string['enteramount']           = 'Enter amount';
+$string['availablecoins']        = 'Available balance: {$a} coins';
+$string['redeem']                = 'Redeem';
+$string['coinsredeemed']         = '{$a} coin(s) redeemed successfully.';
+$string['error_invalidamount']   = 'Invalid amount. Must be greater than 0.';
+$string['error_redeemcoins']     = 'Error redeeming coins';
+
+// Coin transaction type labels (txtype field values) — defined in Coins section above.
+
+// ============================================================================
+// Coins — admin management (admin/coins.php)
+// ============================================================================
+$string['coinsmanagement']       = 'Manage Coins';
+$string['selectstudent']         = 'Select Student';
+$string['choosestudent']         = '-- Choose a student --';
+$string['coinsadded']            = 'Coins added successfully.';
+$string['insufficientcoins']     = 'Insufficient coin balance.';
+$string['coinsdeducted']         = 'Coins deducted successfully.';
+$string['studentcoindetails']    = 'Student Coin Details';
+$string['allstudentbalances']    = 'All Student Balances';
+$string['confirmdeduce']         = 'Are you sure you want to deduct these coins?';
+$string['noledger']              = 'No coin transactions found for this student.';
+
+// ============================================================================
+// Generic UI strings used across admin and student pages
+// ============================================================================
+$string['type']                  = 'Type';
+$string['amount']                = 'Amount';
+$string['balance']               = 'Balance';
+$string['notes']                 = 'Notes';
+$string['email']                 = 'Email';
+$string['idnumber']              = 'ID Number';
+$string['view']                  = 'View';
+$string['add']                   = 'Add';
+$string['deduct']                = 'Deduct';
+$string['override']              = 'Override';
+$string['selectoutcome']         = '-- Select outcome --';
+$string['adminoutcomes']         = 'Admin — CPA Outcomes';
+$string['currentoutcome']        = 'Current Outcome';
+$string['locked']                = 'Locked';
+// txtype_assessment_won defined in Coins — admin management section above.

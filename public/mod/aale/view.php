@@ -52,19 +52,47 @@ $PAGE->set_context($context);
 // Output header.
 echo $OUTPUT->header();
 
-// Determine user role and display appropriate dashboard.
-$isadmin = has_capability('mod/aale:manageslots', $context);
-$isfaculty = has_capability('mod/aale:markattendance', $context);
-$isstudent = !$isadmin && !$isfaculty;
+// ── Role & routing logic ─────────────────────────────────────────────────────
+//
+// editingteacher has BOTH manageslots AND markattendance, so a pure capability
+// check would always send them to the admin view — even when they are assigned
+// to a slot as faculty and need to mark attendance.
+//
+// Priority:
+//   1. If the current user is assigned as a teacher to at least one active slot
+//      AND has markattendance → show FACULTY dashboard (+ admin tools below).
+//   2. Else if the user has manageslots → ADMIN dashboard only.
+//   3. Else if the user has markattendance/setoutcome → FACULTY dashboard.
+//   4. Otherwise → STUDENT dashboard.
 
-if ($isadmin) {
-    // Admin dashboard.
-    echo aale_render_admin_dashboard($cm, $aale, $context);
-} else if ($isfaculty) {
-    // Faculty dashboard.
+$isadmin   = has_capability('mod/aale:manageslots',    $context);
+$isfaculty = has_capability('mod/aale:markattendance', $context)
+           || has_capability('mod/aale:setoutcome',    $context);
+
+// Check whether this user is actually assigned as a teacher to any slot.
+$isteacher = $isfaculty && $DB->record_exists(
+    'aale_slots',
+    ['aaleid' => $aale->id, 'teacherid' => $USER->id, 'status' => 'active']
+);
+
+if ($isteacher) {
+    // Show the faculty dashboard so they can mark attendance / set outcomes.
     echo aale_render_faculty_dashboard($cm, $aale, $context);
+
+    if ($isadmin) {
+        // Also expose admin tools for editing teachers who manage AND teach.
+        echo html_writer::tag('hr', '');
+        echo aale_render_admin_dashboard($cm, $aale, $context);
+    }
+
+} elseif ($isadmin) {
+    echo aale_render_admin_dashboard($cm, $aale, $context);
+
+} elseif ($isfaculty) {
+    // Teacher with markattendance but not yet assigned to any slot.
+    echo aale_render_faculty_dashboard($cm, $aale, $context);
+
 } else {
-    // Student dashboard.
     echo aale_render_student_dashboard($cm, $aale, $context);
 }
 
